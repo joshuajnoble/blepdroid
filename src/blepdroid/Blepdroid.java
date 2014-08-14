@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.UUID;
 
 import processing.core.PApplet;
+import android.app.Activity;
+import android.app.Application;
+import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -26,6 +29,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
@@ -44,41 +48,38 @@ import android.widget.Toast;
  * data - byte array of the data received<br />
  */
 
-public class Blepdroid extends BluetoothGattCallback {
+public class Blepdroid extends Fragment {
 	
 	protected PApplet parent;
+	protected Context parentContext;
 
 	public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
 	BluetoothDevice chosenBluetoothDevice;
 	
 	private final static String TAG = Blepdroid.class.getSimpleName();
 
-//  private TextView mConnectionState;
-//  private TextView mDataField;
-  private String mDeviceName;
-  private String mDeviceAddress;
-//  private ExpandableListView mGattServicesList;
-  
-  String unknownServiceString; //getResources().getString(R.string.unknown_service);
-  String unknownCharaString; //getResources().getString(R.string.unknown_characteristic);
-  
-  private BluetoothLeService mBluetoothLeService;
-  private HashMap<String, BluetoothGattCharacteristic> selectedServiceCharacteristics =
-		  new HashMap<String, BluetoothGattCharacteristic>();
-  
-  private HashMap<String, ArrayList<BluetoothGattCharacteristic>> availableServicesAndCharacteristics =
-		  new HashMap<String, ArrayList<BluetoothGattCharacteristic>>();
-  
-  private boolean mConnected = false;
-  private BluetoothGattCharacteristic mNotifyCharacteristic;
-
-  private final String LIST_NAME = "NAME";
-  private final String LIST_UUID = "UUID";	
+	private String mDeviceName;
+	private String mDeviceAddress;
+	  
+	String unknownServiceString; //getResources().getString(R.string.unknown_service);
+	String unknownCharaString; //getResources().getString(R.string.unknown_characteristic);
+	  
+	private BluetoothLeService mBluetoothLeService;
+	private HashMap<String, BluetoothGattCharacteristic> selectedServiceCharacteristics 
+		= new HashMap<String, BluetoothGattCharacteristic>();
+	  
+	private HashMap<String, ArrayList<BluetoothGattCharacteristic>> availableServicesAndCharacteristics 
+		= new HashMap<String, ArrayList<BluetoothGattCharacteristic>>();
+	  
+	private boolean mConnected = false;
+	private BluetoothGattCharacteristic mNotifyCharacteristic;
 	
-  
-  private BluetoothAdapter mBluetoothAdapter;
-  private boolean mScanning;
-  private Handler mHandler;
+	private final String LIST_NAME = "NAME";
+	private final String LIST_UUID = "UUID";	
+		  
+	private BluetoothAdapter mBluetoothAdapter;
+	private boolean mScanning;
+	private Handler mHandler;
   
 	public static HashMap<String, String> gattAttributes;
 	public static HashMap<String, UUID> characteristicUUIDs;
@@ -103,6 +104,8 @@ public class Blepdroid extends BluetoothGattCallback {
 	
 	public String hwAddressToConnect;
 	
+	public BlepGattCallback gattCallback;
+	
 	// new
 	private int mConnectionState = STATE_DISCONNECTED;
 
@@ -117,25 +120,113 @@ public class Blepdroid extends BluetoothGattCallback {
     public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// begin public API
+	// required
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+       // final Intent intent = getIntent();
+        Intent gattServiceIntent = new Intent(parent.getApplicationContext(), BluetoothLeService.class);
+        parent.getApplicationContext().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+	public void onResume() {
+        super.onResume();
+        parent.getApplicationContext().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        if (mBluetoothLeService != null) {
+            final boolean result = mBluetoothLeService.connect(mDeviceAddress);
+            Log.d(TAG, "Connect request result=" + result);
+        }
+    }
+
+    @Override
+	public void onPause() {
+        super.onPause();
+        parent.getApplicationContext().unregisterReceiver(mGattUpdateReceiver);
+    }
+
+    @Override
+	public void onDestroy() {
+        super.onDestroy();
+        parent.getApplicationContext().unbindService(mServiceConnection);
+        mBluetoothLeService = null;
+    }
+    
+    
+	// Code to manage Service lifecycle
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+        	
+        	PApplet.println( " ServiceConnection onServiceConnected ");
+        	
+            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
+            if (!mBluetoothLeService.initialize(parent)) {
+                PApplet.println(TAG + " ServiceConnection Unable to initialize Bluetooth ");
+                //finish();
+            }
+            // Automatically connects to the device upon successful start-up initialization.
+            // mBluetoothLeService.connect(mDeviceAddress);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mBluetoothLeService = null;
+        }
+    };
+
+    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+        	
+        	PApplet.println( " BroadcastReceiver onReceive ");
+        	
+            final String action = intent.getAction();
+            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                mConnected = true;
+                //updateConnectionState(R.string.connected);
+                //invalidateOptionsMenu();
+            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                mConnected = false;
+                //updateConnectionState(R.string.disconnected);
+//                invalidateOptionsMenu();
+//                clearUI();
+            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                // Show all the supported services and characteristics on the user interface.
+                parseGattServices(mBluetoothLeService.getSupportedGattServices());
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                //displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+            }
+        }
+    };
 	
-	public Blepdroid(PApplet _parent) {
+	public Blepdroid(Context _parent) {
 		
 		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
 		
 		if(blepdroidSingleton != null)
 			return;
 		
-		this.parent = _parent;
+		this.parentContext = _parent;
+		this.parent = (PApplet) _parent;
+		
 		discoveredDevices = new HashMap<String, BlepdroidDevice>();
-		findParentIntention();
-		
-		mBluetoothLeService = new BluetoothLeService();
-		mBluetoothLeService.initialize();
-		
+		findParentIntention();		
+		gattCallback = new BlepGattCallback();
+
 		blepdroidSingleton = this;
+		
 	}
+	
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// begin public API
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	
 	public static String lookup(String uuid, String defaultName) {
         String name = gattAttributes.get(uuid);
@@ -191,12 +282,9 @@ public class Blepdroid extends BluetoothGattCallback {
 	}
 
 	public void scanDevices() {
-		
-		PApplet.println(" Scan devices ");
 	
 		discoveredDevices.clear();
 		
-		PApplet.println(" Make handler ");
 		parent.runOnUiThread( new Runnable()
 		{
 			public void run()
@@ -232,24 +320,28 @@ public class Blepdroid extends BluetoothGattCallback {
 	
 	public void addDevice( final BluetoothDevice device, int rssi, byte[] scanRecord )
 	{
-		//PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
-		
+
 		UUID uuid = new UUID(0,0);
 		if(device.getUuids() != null && device.getUuids().length > 0)
 		{
 			uuid = device.getUuids()[0].getUuid();
 		}
-		else
-		{
-			//PApplet.println( "no uuid ");
-		}
 		
 		BlepdroidDevice d = new BlepdroidDevice(device.getAddress(), device.getName(), uuid, rssi, scanRecord);
 		if(!discoveredDevices.containsKey(device.getName()))
 		{
-			PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
+			//PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
 			discoveredDevices.put( device.getName(), d );
-			deviceDiscovered(d);
+			
+			try {
+				Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -290,210 +382,9 @@ public class Blepdroid extends BluetoothGattCallback {
 	// end public API
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	public void deviceDiscovered(BlepdroidDevice d)
-	{
-		try {
-			PApplet.println( "in device discovered " + Blepdroid.getInstance().onDeviceDiscoveredMethod );
-			Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
 	
-	public void servicesDiscovered(BluetoothGatt gatt, int status)
-	{
-		try {
-			onServicesDiscoveredMethod.invoke(gatt.getDevice().getName(), status);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
-	{
-		try {
-			onCharacteristicChangedMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
-	{
-		try {
-			onCharacteristicReadMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
-	{
-		try {
-			onCharacteristicWriteMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState)
-	{
-		try {
-			onBluetoothConnectionMethod.invoke( gatt.getDevice().getName(), newState );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
-	{
-		try {
-			onDescriptorReadMethod.invoke( descriptor.getClass().getName(), "READ" );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
-	{
-		try {
-			onDescriptorWriteMethod.invoke( descriptor.getClass().getName(), "WRITE");
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status)
-	{
-		try {
-			onBluetoothRSSIMethod.invoke( gatt.getClass().getName(), rssi );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void onReliableWriteCompleted(BluetoothGatt gatt, int status)
-	{
-		
-	}
 
-	public void onServicesDiscovered(BluetoothGatt gatt, int status)
-	{
-		try {
-			onServicesDiscoveredMethod.invoke( gatt.getClass().getName(), status );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-
-	
-	// Code to manage Service lifecycle.
-    private final ServiceConnection mServiceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder service) {
-            mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
-            if (!mBluetoothLeService.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth");
-                //finish();
-            }
-            // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService.connect(mDeviceAddress);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
-        }
-    };
-
-    // Handles various events fired by the Service.
-    // ACTION_GATT_CONNECTED: connected to a GATT server.
-    // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
-    // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
-    // ACTION_DATA_AVAILABLE: received data from the device.  This can be a result of read or notification operations.
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-                mConnected = true;
-                //updateConnectionState(R.string.connected);
-                //invalidateOptionsMenu();
-            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                mConnected = false;
-                //updateConnectionState(R.string.disconnected);
-//                invalidateOptionsMenu();
-//                clearUI();
-            } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                // Show all the supported services and characteristics on the user interface.
-                parseGattServices(mBluetoothLeService.getSupportedGattServices());
-            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
-            }
-        }
-    };
-
-    private void updateConnectionState(final int resourceId) {
-        parent.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                //mConnectionState.setText(resourceId);
-            	updateConnectionState( resourceId );
-            }
-        });
-    }
-
-    private void displayData(String data) {
-        if (data != null) {
-            //mDataField.setText(data);
-        }
-    }
-
-    // Demonstrates how to iterate through the supported GATT Services/Characteristics.
-    // In this sample, we populate the data structure that is bound to the ExpandableListView
-    // on the UI.
+    // iterate through the supported GATT Services/Characteristics.
     private void parseGattServices(List<BluetoothGattService> gattServices) {
         
     	if (gattServices == null) 
@@ -551,20 +442,11 @@ public class Blepdroid extends BluetoothGattCallback {
 			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, String.class });
 			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, String.class });
 			
-			/*public String name;
-			public String address;
-			public UUID id;
-			public int rssi;
-			public byte[] scanRecord;*/
-			
 			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
-			PApplet.println( onCharacteristicWriteMethod );
-			PApplet.println( onDeviceDiscoveredMethod );
-			PApplet.println("Found onBluetoothDataEvent method.");
 		} 
 		catch (NoSuchMethodException e) 
 		{
-			PApplet.println("Did not find onBluetoothDataEvent callback method.");
+			PApplet.println("Did not find all callback methods ");
 		}
 
 	}

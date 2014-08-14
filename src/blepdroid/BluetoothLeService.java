@@ -196,12 +196,12 @@ public class BluetoothLeService extends Service {
 	 * 
 	 * @return Return true if the initialization is successful.
 	 */
-	public boolean initialize() {
+	public boolean initialize( PApplet parent ) {
 		// For API level 18 and above, get a reference to BluetoothAdapter
 		// through
 		// BluetoothManager.
 		if (mBluetoothManager == null) {
-			mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+			mBluetoothManager = (BluetoothManager) parent.getSystemService(Context.BLUETOOTH_SERVICE);
 			if (mBluetoothManager == null) {
 				PApplet.println(TAG + "Unable to initialize BluetoothManager.");
 				return false;
@@ -255,10 +255,9 @@ public class BluetoothLeService extends Service {
 			PApplet.println(TAG + "Device not found.  Unable to connect.");
 			return false;
 		}
-		// We want to directly connect to the device, so we are setting the
-		// autoConnect
-		// parameter to false.
-		mBluetoothGatt = device.connectGatt(this, false, Blepdroid.getInstance());
+		
+		// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
+		mBluetoothGatt = device.connectGatt(this, false, Blepdroid.getInstance().gattCallback);
 		PApplet.println(TAG + "Trying to create a new connection.");
 		mBluetoothDeviceAddress = address;
 		mConnectionState = STATE_CONNECTING;
