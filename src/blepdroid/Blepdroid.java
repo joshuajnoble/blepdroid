@@ -3,12 +3,15 @@
  */
 package blepdroid;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
+import com.lannbox.rfduinotest.BluetoothHelper;
 
 import processing.core.PApplet;
 import android.app.Activity;
@@ -65,12 +68,13 @@ public class Blepdroid extends Fragment {
 	String unknownCharaString; //getResources().getString(R.string.unknown_characteristic);
 	  
 	private BluetoothLeService mBluetoothLeService;
+	
 	private HashMap<String, BluetoothGattCharacteristic> selectedServiceCharacteristics 
 		= new HashMap<String, BluetoothGattCharacteristic>();
-	  
+//	  
 	private HashMap<String, ArrayList<BluetoothGattCharacteristic>> availableServicesAndCharacteristics 
 		= new HashMap<String, ArrayList<BluetoothGattCharacteristic>>();
-	  
+//	  
 	private boolean mConnected = false;
 	private BluetoothGattCharacteristic mNotifyCharacteristic;
 	
@@ -96,15 +100,22 @@ public class Blepdroid extends Fragment {
 	protected Method onCharacteristicWriteMethod;
 	protected Method onDeviceDiscoveredMethod;
 
-    private static final int REQUEST_ENABLE_BT = 1;
+	// these are for the RFDduino
+	public static UUID UUID_SERVICE = BluetoothHelper.sixteenBitUuid(0x2220);
+    public static UUID UUID_RECEIVE = BluetoothHelper.sixteenBitUuid(0x2221);
+    public static UUID UUID_SEND = BluetoothHelper.sixteenBitUuid(0x2222);
+    public static UUID UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x2223);
+    public static UUID UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
+    
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
 
 	protected static Blepdroid blepdroidSingleton;
 	
 	public String hwAddressToConnect;
-	
 	public BlepGattCallback gattCallback;
+	
+	HashMap<String, BluetoothGatt> discoveredGatts;
 	
 	// new
 	private int mConnectionState = STATE_DISCONNECTED;
@@ -126,40 +137,70 @@ public class Blepdroid extends Fragment {
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
+    	
+    	PApplet.println(" BlepDroid on create ");
+    	
         super.onCreate(savedInstanceState);
         
-       // final Intent intent = getIntent();
-        Intent gattServiceIntent = new Intent(parent.getApplicationContext(), BluetoothLeService.class);
-        parent.getApplicationContext().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+        Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
+        getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+        
+        getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
     @Override
 	public void onResume() {
+    	
+    	PApplet.println(" BlepDroid on onResume ");
+    	
         super.onResume();
-        parent.getApplicationContext().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        
+        // won't need this once we're done, hopefully
+        if(onDeviceDiscoveredMethod == null)
+        {
+        	findParentIntention();
+        }
+        
         if (mBluetoothLeService != null) {
+        	
             final boolean result = mBluetoothLeService.connect(mDeviceAddress);
-            Log.d(TAG, "Connect request result=" + result);
+            PApplet.println("Connect request result = " + result);
+            
+            scanDevices();
+        } 
+        else
+        {
+        	
+        	PApplet.println(" mBluetoothLeService is null ");
+        	
+			Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
+			getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+			
+			scanDevices();
         }
     }
 
     @Override
 	public void onPause() {
         super.onPause();
-        parent.getApplicationContext().unregisterReceiver(mGattUpdateReceiver);
+        mBluetoothLeService.disconnect();
+        getActivity().unregisterReceiver(mGattUpdateReceiver);
     }
 
     @Override
 	public void onDestroy() {
         super.onDestroy();
-        parent.getApplicationContext().unbindService(mServiceConnection);
+        getActivity().unbindService(mServiceConnection);
+        //getActivity().unregisterReceiver(mGattUpdateReceiver);
+        mBluetoothLeService.close();
         mBluetoothLeService = null;
     }
     
     
 	// Code to manage Service lifecycle
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
-
+    	
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
         	
@@ -208,7 +249,7 @@ public class Blepdroid extends Fragment {
 	public Blepdroid(Context _parent) {
 		
 		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
-		
+
 		if(blepdroidSingleton != null)
 			return;
 		
@@ -216,7 +257,8 @@ public class Blepdroid extends Fragment {
 		this.parent = (PApplet) _parent;
 		
 		discoveredDevices = new HashMap<String, BlepdroidDevice>();
-		findParentIntention();		
+		discoveredGatts = new HashMap<String, BluetoothGatt>();
+		findParentIntention();
 		gattCallback = new BlepGattCallback();
 
 		blepdroidSingleton = this;
@@ -268,13 +310,13 @@ public class Blepdroid extends Fragment {
 		hwAddressToConnect = _hwAddress;
 		
 		PApplet.println(" connectDevice ");
-		parent.runOnUiThread( new Runnable()
-		{
-			public void run()
-			{
-				Blepdroid.getInstance().mBluetoothLeService.connect(Blepdroid.getInstance().hwAddressToConnect);
-			}
-		});
+//		parent.runOnUiThread( new Runnable()
+//		{
+//			public void run()
+//			{
+				mBluetoothLeService.connect(Blepdroid.getInstance().hwAddressToConnect);
+//			}
+//		});
 	}
 	
 	public boolean connectDevice(BlepdroidDevice device) {
@@ -282,13 +324,15 @@ public class Blepdroid extends Fragment {
 	}
 
 	public void scanDevices() {
+		
+		PApplet.println(" scanDevices ");
 	
 		discoveredDevices.clear();
 		
-		parent.runOnUiThread( new Runnable()
-		{
-			public void run()
-			{
+//		parent.runOnUiThread( new Runnable()
+//		{
+//			public void run()
+//			{
 				mHandler = new Handler();
 				
 				PApplet.println(" check functionality ");
@@ -314,8 +358,8 @@ public class Blepdroid extends Fragment {
 		        }
 		        
 		        scanLeDevice(true);
-			}
-		});
+//			}
+//		});
 	}
 	
 	public void addDevice( final BluetoothDevice device, int rssi, byte[] scanRecord )
@@ -327,29 +371,66 @@ public class Blepdroid extends Fragment {
 			uuid = device.getUuids()[0].getUuid();
 		}
 		
-		BlepdroidDevice d = new BlepdroidDevice(device.getAddress(), device.getName(), uuid, rssi, scanRecord);
+		BlepdroidDevice d = new BlepdroidDevice(device.getName(), device.getAddress(), uuid, rssi, scanRecord);
 		if(!discoveredDevices.containsKey(device.getName()))
 		{
 			//PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
 			discoveredDevices.put( device.getName(), d );
+			PApplet.println( Blepdroid.getInstance().onDeviceDiscoveredMethod );
+			
 			
 			try {
-				Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
+				//Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
+				Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {
 				e.printStackTrace();
 			} catch (InvocationTargetException e) {
+				
+				try {
+					onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
+				} catch (IllegalArgumentException e2) {
+					e2.printStackTrace();
+				} catch (IllegalAccessException e2) {
+					e2.printStackTrace();
+				} catch (InvocationTargetException e2) {
+					e2.printStackTrace();
+				}
+				
+				e.printStackTrace();
+			} catch (java.lang.NullPointerException e) {
+				
+				try {
+					if(onDeviceDiscoveredMethod != null)
+					{
+						onDeviceDiscoveredMethod.invoke(d);
+					}
+				} catch (IllegalArgumentException e2) {
+					e2.printStackTrace();
+				} catch (IllegalAccessException e2) {
+					e2.printStackTrace();
+				} catch (InvocationTargetException e2) {
+					e2.printStackTrace();
+				}
+				
 				e.printStackTrace();
 			}
+			
 		}
 	}
 
-	public void writeCharacteristic(String characteristic, byte[] data) {
+	public void writeCharacteristic(String characteristic, byte[] data) 
+	{
 		// put the data in, then send it off to be written
 		selectedServiceCharacteristics.get(characteristic).setValue(data);
 		mBluetoothLeService.writeCharacteristic(selectedServiceCharacteristics.get(characteristic));
-
+	}
+	
+	public void readCharacteristic(UUID characteristic) 
+	{
+		// put the data in, then send it off to be written
+		mBluetoothLeService.readCharacteristic(characteristic);
 	}
 	
 	public void readRSSI()
@@ -357,65 +438,81 @@ public class Blepdroid extends Fragment {
 		mBluetoothLeService.readRSSI();
 	}
 
-	public void setCharacteristicToListen(String characteristic) {	
+	public void setCharacteristicToListen(String characteristic)
+	{
+		mNotifyCharacteristic = selectedServiceCharacteristics.get(characteristic);
+        mBluetoothLeService.setCharacteristicNotification(selectedServiceCharacteristics.get(characteristic).getUuid(), UUID_CLIENT_CONFIGURATION, true);
+	}
+	
+	public void setCharacteristicToListen(UUID characteristic)
+	{
+        mBluetoothLeService.setCharacteristicNotification(characteristic, UUID_CLIENT_CONFIGURATION, true);
+	}
+	
+	public void discoverServices()
+	{
+		mBluetoothLeService.discoverServices();
 		
-		final int charaProp = selectedServiceCharacteristics.get(characteristic).getProperties();
+	}
+	
+	public boolean connectToService( UUID serviceID )
+	{
+		return mBluetoothLeService.createService( serviceID );
+	}
+	
+	public HashMap<String, ArrayList<String>> findAllServicesCharacteristics()
+	{
+		// get them
+		parseGattServices(mBluetoothLeService.getSupportedGattServices());
 		
-		if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
-            // If there is an active notification on a characteristic, clear
-            // it first so it doesn't update the data field on the user interface.
-            if (mNotifyCharacteristic != null) {
-                mBluetoothLeService.setCharacteristicNotification(mNotifyCharacteristic, false);
-                mNotifyCharacteristic = null;
-            }
-            mBluetoothLeService.readCharacteristic(selectedServiceCharacteristics.get(characteristic));
-        }
-        if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
-            mNotifyCharacteristic = selectedServiceCharacteristics.get(characteristic);
-            mBluetoothLeService.setCharacteristicNotification(selectedServiceCharacteristics.get(characteristic), true);
-        }
-		
-		mBluetoothLeService.setCharacteristicNotification(selectedServiceCharacteristics.get(characteristic), true);
+		// now make them friendly
+		HashMap<String, ArrayList<String>> allCharasForService = new HashMap<String, ArrayList<String>>();
+		for( String service : availableServicesAndCharacteristics.keySet() )
+		{
+			ArrayList<String> chars = new ArrayList<String>();
+			for( BluetoothGattCharacteristic chara : availableServicesAndCharacteristics.get(service) )
+			{
+				chars.add(chara.getUuid().toString());
+			}
+			allCharasForService.put(service, chars);
+		}
+		return allCharasForService;
 	}
 	
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// end public API
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	
+	public void servicesDiscovered(BluetoothGatt gatt, int status)
+	{
+		discoveredGatts.put(Integer.toString(gatt.hashCode()), gatt);
+	}
 
     // iterate through the supported GATT Services/Characteristics.
-    private void parseGattServices(List<BluetoothGattService> gattServices) {
+    private void parseGattServices(List<BluetoothGattService> gattServices) 
+    {
         
-    	if (gattServices == null) 
+    	if (gattServices == null)
+    	{
         	return;
-        
+    	}
+        	
         String uuid = null;
-        
-//        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<HashMap<String, String>>();
-//        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData = new ArrayList<ArrayList<HashMap<String, String>>>();
         availableServicesAndCharacteristics = new HashMap<String, ArrayList<BluetoothGattCharacteristic>>();
 
         // Loops through available GATT Services.
-        for (BluetoothGattService gattService : gattServices) {
+        for (BluetoothGattService gattService : gattServices)
+        {
             HashMap<String, String> currentServiceData = new HashMap<String, String>();
             uuid = gattService.getUuid().toString();
-            currentServiceData.put(  LIST_NAME, Blepdroid.lookup(uuid, unknownServiceString));
-            currentServiceData.put( LIST_UUID, uuid );
-//            gattServiceData.add(currentServiceData);
 
-//            ArrayList<HashMap<String, String>> gattCharacteristicGroupData =  new ArrayList<HashMap<String, String>>();
             List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
             ArrayList<BluetoothGattCharacteristic> charas = new ArrayList<BluetoothGattCharacteristic>();
 
             // Loops through available Characteristics.
             for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
                 charas.add(gattCharacteristic);
-//                HashMap<String, String> currentCharaData = new HashMap<String, String>();
                 uuid = gattCharacteristic.getUuid().toString();
-//                currentCharaData.put(LIST_NAME, Blepdroid.lookup(uuid, unknownCharaString));
-//                currentCharaData.put(LIST_UUID, uuid);
-//                gattCharacteristicGroupData.add(currentCharaData);
             }
             availableServicesAndCharacteristics.put(gattService.getClass().getName(), charas);
         }
@@ -433,20 +530,46 @@ public class Blepdroid extends Fragment {
 	private void findParentIntention() {
 		try 
 		{
-			onServicesDiscoveredMethod = parent.getClass().getMethod( "onServicesDiscovered", new Class[] { String.class, int.class });
+			
+//			void onDeviceDiscovered(BlepdroidDevice device)
+//			void onServicesDiscovered(ArrayList<String> ids, int status)
+//			void onBluetoothRSSI(String device, int rssi)
+//			void onBluetoothConnection( String device, int state)
+//			void onCharacteristicChanged(String characteristic, byte[] data)
+//			void onDescriptorWrite(String characteristic, String data)
+//			void onDescriptorRead(String characteristic, String data)
+//			void onCharacteristicRead(String characteristic, byte[] data)
+//			void onCharacteristicWrite(String characteristic, String data)
+
+			
+			onServicesDiscoveredMethod = parent.getClass().getMethod( "onServicesDiscovered", new Class[] { ArrayList.class, int.class });
 			onBluetoothRSSIMethod = parent.getClass().getMethod( "onBluetoothRSSI", new Class[] { String.class, int.class });
 			onBluetoothConnectionMethod = parent.getClass().getMethod( "onBluetoothConnection", new Class[] { String.class, int.class });
 			onCharacteristicChangedMethod = parent.getClass().getMethod( "onCharacteristicChanged", new Class[] { String.class, byte[].class }); 
 			onDescriptorWriteMethod = parent.getClass().getMethod( "onDescriptorWrite", new Class[] { String.class, String.class });
 			onDescriptorReadMethod = parent.getClass().getMethod( "onDescriptorRead", new Class[] { String.class, String.class });
-			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, String.class });
+			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, byte[].class });
 			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, String.class });
 			
-			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
+			//onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
+			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { BlepdroidDevice.class } );
+			PApplet.print(" find parent intention ");
+			PApplet.println(onDeviceDiscoveredMethod);
 		} 
 		catch (NoSuchMethodException e) 
 		{
 			PApplet.println("Did not find all callback methods ");
+		}
+		
+		try
+		{
+			// do we have service UUIDs?
+			Field serviceUUID = parent.getClass().getDeclaredField("UUID_SERVICE");
+			UUID_SERVICE = (UUID) serviceUUID.get(parent);
+		}
+		catch( Exception e)
+		{
+			
 		}
 
 	}

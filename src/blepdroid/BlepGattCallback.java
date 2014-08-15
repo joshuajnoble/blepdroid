@@ -1,50 +1,25 @@
 package blepdroid;
 
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+
+import processing.core.PApplet;
+
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 public class BlepGattCallback extends BluetoothGattCallback {
 	
-	public void deviceDiscovered(BlepdroidDevice d)
-	{
-		try {
-			//PApplet.println( "in device discovered " + Blepdroid.getInstance().onDeviceDiscoveredMethod );
-			Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void servicesDiscovered(BluetoothGatt gatt, int status)
-	{
-		try {
-			Blepdroid.getInstance().onServicesDiscoveredMethod.invoke(gatt.getDevice().getName(), status);
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
-	}
-	
+	@Override
 	public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
 	{
 		try {
-			Blepdroid.getInstance().onCharacteristicChangedMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
+			Blepdroid.getInstance().onCharacteristicChangedMethod.invoke( Blepdroid.getInstance().parent, characteristic.getUuid().toString(), 
+					characteristic.getValue());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -54,10 +29,11 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		}
 	}
 	
+	@Override
 	public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
 	{
 		try {
-			Blepdroid.getInstance().onCharacteristicReadMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
+			Blepdroid.getInstance().onCharacteristicReadMethod.invoke( Blepdroid.getInstance().parent, characteristic.getUuid().toString(), characteristic.getValue() );
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -67,10 +43,11 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		}
 	}
 	
+	@Override
 	public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
 	{
 		try {
-			Blepdroid.getInstance().onCharacteristicWriteMethod.invoke( characteristic.getClass().getName(), characteristic.getValue() );
+			Blepdroid.getInstance().onCharacteristicWriteMethod.invoke( Blepdroid.getInstance().parent, characteristic.getClass().getName(), characteristic.getValue() );
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -80,23 +57,39 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		}
 	}
 	
+	@Override
 	public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState)
 	{
+		
+		PApplet.println(" onConnectionStateChange " + Integer.toString(status) +  " " + Integer.toString(newState) ); 
+		
 		try {
-			Blepdroid.getInstance().onBluetoothConnectionMethod.invoke( gatt.getDevice().getName(), newState );
+			Blepdroid.getInstance().onBluetoothConnectionMethod.invoke( Blepdroid.getInstance().parent, gatt.getDevice().getName(), newState );
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		} catch (InvocationTargetException e) {
-			e.printStackTrace();
+			
+			// try without parent
+			try{
+				Blepdroid.getInstance().onBluetoothConnectionMethod.invoke( gatt.getDevice().getName(), newState );
+			}
+			catch (IllegalArgumentException e2) {
+			} 
+			catch (IllegalAccessException e2) {
+			} 
+			catch (InvocationTargetException e2) {
+			}
+		
 		}
 	}
 	
+	@Override
 	public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
 	{
 		try {
-			Blepdroid.getInstance().onDescriptorReadMethod.invoke( descriptor.getClass().getName(), "READ" );
+			Blepdroid.getInstance().onDescriptorReadMethod.invoke( Blepdroid.getInstance().parent, descriptor.getValue(), "READ" );
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -106,10 +99,11 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		}
 	}
 	
+	@Override
 	public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
 	{
 		try {
-			Blepdroid.getInstance().onDescriptorWriteMethod.invoke( descriptor.getClass().getName(), "WRITE");
+			Blepdroid.getInstance().onDescriptorWriteMethod.invoke( Blepdroid.getInstance().parent, descriptor.getClass().getName(), "WRITE");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -120,10 +114,11 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		
 	}
 	
+	@Override
 	public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status)
 	{
 		try {
-			Blepdroid.getInstance().onBluetoothRSSIMethod.invoke( gatt.getClass().getName(), rssi );
+			Blepdroid.getInstance().onBluetoothRSSIMethod.invoke( Blepdroid.getInstance().parent, gatt.getClass().getName(), rssi );
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -133,21 +128,40 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		}
 	}
 	
+	@Override
 	public void onReliableWriteCompleted(BluetoothGatt gatt, int status)
 	{
 		
 	}
 
+	@Override
 	public void onServicesDiscovered(BluetoothGatt gatt, int status)
 	{
-		try {
-			Blepdroid.getInstance().onServicesDiscoveredMethod.invoke( gatt.getClass().getName(), status );
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
+		PApplet.println( "BlepGattCallback::onServicesDiscovered " + Integer.toString(status));
+		
+		if(status == BluetoothGatt.GATT_SUCCESS)
+		{
+		
+			Blepdroid.getInstance().servicesDiscovered(gatt, status);
+			
+			ArrayList<String> serviceStrings = new ArrayList<String>();
+			List<BluetoothGattService> services = gatt.getServices();
+			
+			for( int i = 0; i < services.size(); i++ )
+			{
+				serviceStrings.add( services.get(i).getUuid().toString());
+			}
+			
+			try {
+				Blepdroid.getInstance().onServicesDiscoveredMethod.invoke( Blepdroid.getInstance().parent, serviceStrings, status );
+	//			Blepdroid.getInstance().servicesDiscovered(gatt, status);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }
