@@ -1,13 +1,14 @@
 import blepdroid.*;
 import com.lannbox.rfduinotest.*;
 import android.os.Bundle;
+import android.content.Context;
 import java.util.UUID;
 
-public static UUID UUID_SERVICE = BluetoothHelper.sixteenBitUuid(0x2220);
-public static UUID UUID_RECEIVE = BluetoothHelper.sixteenBitUuid(0x2221);
-public static UUID UUID_SEND = BluetoothHelper.sixteenBitUuid(0x2222);
-public static UUID UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x2223);
-public static UUID UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
+public static UUID RFDUINO_UUID_SERVICE = BluetoothHelper.sixteenBitUuid(0x2220);
+public static UUID RFDUINO_UUID_RECEIVE = BluetoothHelper.sixteenBitUuid(0x2221);
+public static UUID RFDUINO_UUID_SEND = BluetoothHelper.sixteenBitUuid(0x2222);
+public static UUID RFDUINO_UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x2223);
+public static UUID RFDUINO_UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
 
 boolean allSetUp = false;
 
@@ -15,6 +16,7 @@ boolean allSetUp = false;
 void setup() {
   size(400,400);
   smooth();
+  Blepdroid.initialize( (Context) this);
 }
 
 void draw() {
@@ -24,18 +26,24 @@ void draw() {
 
 void mousePressed()
 {
-  if(allSetUp)
+   println(" working ");
+  println( mouseX + " " + mouseY ); 
+  if(mouseY < 400)
   {
-    Blepdroid.getInstance().readCharacteristic(UUID_RECEIVE);
+    println(" saying hi!");
+    String hi = new String("hi");
+    Blepdroid.getInstance().writeCharacteristic(RFDUINO_UUID_SEND, hi.getBytes());
   }
 }
 
-public void onCreate(Bundle savedInstanceState) 
-{  
-    super.onCreate(savedInstanceState);
-    getFragmentManager().beginTransaction().add(android.R.id.content, new Blepdroid(this)).commit();
-    Blepdroid.getInstance().scanDevices();
-}
+// so what's all this? well, to create the underlying bluetooth service we need to instantiate the 
+// Blepdroid as a fragment, and to do that, we need to do it in the 
+//public void onCreate(Bundle savedInstanceState) 
+//{  
+//    super.onCreate(savedInstanceState);
+//    getFragmentManager().beginTransaction().add(android.R.id.content, new Blepdroid(this)).commit();
+//    Blepdroid.getInstance().scanDevices();
+//}
 
 //void onDeviceDiscovered(String name, String address, UUID id, int rssi, byte[] scanRecord)
 void onDeviceDiscovered(BlepdroidDevice device)
@@ -59,8 +67,8 @@ void onServicesDiscovered(ArrayList<String> ids, int status)
       print( service + " has " );
       println( servicesAndCharas.get(service));
     }
-    Blepdroid.getInstance().connectToService(UUID_SERVICE); 
-    Blepdroid.getInstance().setCharacteristicToListen(UUID_RECEIVE);
+    Blepdroid.getInstance().connectToService(RFDUINO_UUID_SERVICE); 
+    Blepdroid.getInstance().setCharacteristicToListen(RFDUINO_UUID_RECEIVE);
     
    allSetUp = true;
 }
@@ -99,7 +107,7 @@ void onCharacteristicRead(String characteristic, byte[] data)
   println(" onCharacteristicRead " + characteristic + " " + data);
 }
 
-void onCharacteristicWrite(String characteristic, String data)
+void onCharacteristicWrite(String characteristic, byte[] data)
 {
   println(" onCharacteristicWrite " + characteristic + " " + data);
 }

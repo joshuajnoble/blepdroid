@@ -16,29 +16,23 @@
 
 package blepdroid;
 
-import processing.core.PApplet;
+import java.util.List;
+import java.util.UUID;
 
+import processing.core.PApplet;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
-
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.UUID;
-
-import com.lannbox.rfduinotest.BluetoothHelper;
 
 /**
  * Service for managing connection and data communication with a GATT server
@@ -197,11 +191,14 @@ public class BluetoothLeService extends Service {
 	 * @param characteristic
 	 *            The characteristic to read from.
 	 */
-	public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+	public void writeCharacteristic(UUID characteristicID, byte[] value) {
 		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
 			Log.w(TAG, "BluetoothAdapter not initialized");
 			return;
 		}
+		
+		BluetoothGattCharacteristic characteristic = mBluetoothGattService.getCharacteristic(characteristicID);
+		characteristic.setValue(value);
 		mBluetoothGatt.writeCharacteristic(characteristic);
 	}
 

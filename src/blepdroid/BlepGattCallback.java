@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import processing.core.PApplet;
-
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;

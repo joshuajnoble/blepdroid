@@ -11,18 +11,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import com.lannbox.rfduinotest.BluetoothHelper;
-
 import processing.core.PApplet;
-import android.app.Activity;
-import android.app.Application;
 import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
@@ -35,8 +29,9 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
 import android.widget.Toast;
+
+import com.lannbox.rfduinotest.BluetoothHelper;
 
 /**
  * The Class Blepdroid manages the bluetooth connections and service on the android device.
@@ -110,7 +105,7 @@ public class Blepdroid extends Fragment {
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
 
-	protected static Blepdroid blepdroidSingleton;
+	public static Blepdroid blepdroidSingleton;
 	
 	public String hwAddressToConnect;
 	public BlepGattCallback gattCallback;
@@ -130,6 +125,15 @@ public class Blepdroid extends Fragment {
     public final static String ACTION_DATA_AVAILABLE = "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
 
+	public static void initialize(Context parent)
+	{
+		PApplet pparent = (PApplet) parent;
+		pparent.getFragmentManager().beginTransaction().add(
+					android.R.id.content, 
+					new Blepdroid(parent)
+				).commit();
+	}
+    
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// required
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -270,11 +274,6 @@ public class Blepdroid extends Fragment {
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	
-	public static String lookup(String uuid, String defaultName) {
-        String name = gattAttributes.get(uuid);
-        return name == null ? defaultName : name;
-    }
-	
 	public static Blepdroid getInstance()
 	{
 		return blepdroidSingleton;
@@ -399,32 +398,14 @@ public class Blepdroid extends Fragment {
 				}
 				
 				e.printStackTrace();
-			} catch (java.lang.NullPointerException e) {
-				
-				try {
-					if(onDeviceDiscoveredMethod != null)
-					{
-						onDeviceDiscoveredMethod.invoke(d);
-					}
-				} catch (IllegalArgumentException e2) {
-					e2.printStackTrace();
-				} catch (IllegalAccessException e2) {
-					e2.printStackTrace();
-				} catch (InvocationTargetException e2) {
-					e2.printStackTrace();
-				}
-				
-				e.printStackTrace();
 			}
-			
 		}
 	}
 
-	public void writeCharacteristic(String characteristic, byte[] data) 
+	public void writeCharacteristic(UUID characteristic, byte[] data) 
 	{
 		// put the data in, then send it off to be written
-		selectedServiceCharacteristics.get(characteristic).setValue(data);
-		mBluetoothLeService.writeCharacteristic(selectedServiceCharacteristics.get(characteristic));
+		mBluetoothLeService.writeCharacteristic(characteristic, data);
 	}
 	
 	public void readCharacteristic(UUID characteristic) 
@@ -549,7 +530,7 @@ public class Blepdroid extends Fragment {
 			onDescriptorWriteMethod = parent.getClass().getMethod( "onDescriptorWrite", new Class[] { String.class, String.class });
 			onDescriptorReadMethod = parent.getClass().getMethod( "onDescriptorRead", new Class[] { String.class, String.class });
 			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, byte[].class });
-			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, String.class });
+			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, byte[].class });
 			
 			//onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
 			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { BlepdroidDevice.class } );
