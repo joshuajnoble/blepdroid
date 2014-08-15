@@ -25,10 +25,8 @@ void draw() {
 }
 
 void mousePressed()
-{
-   println(" working ");
-  println( mouseX + " " + mouseY ); 
-  if(mouseY < 400)
+{ 
+  if(mouseY < 200)
   {
     println(" saying hi!");
     String hi = new String("hi");
@@ -36,16 +34,6 @@ void mousePressed()
   }
 }
 
-// so what's all this? well, to create the underlying bluetooth service we need to instantiate the 
-// Blepdroid as a fragment, and to do that, we need to do it in the 
-//public void onCreate(Bundle savedInstanceState) 
-//{  
-//    super.onCreate(savedInstanceState);
-//    getFragmentManager().beginTransaction().add(android.R.id.content, new Blepdroid(this)).commit();
-//    Blepdroid.getInstance().scanDevices();
-//}
-
-//void onDeviceDiscovered(String name, String address, UUID id, int rssi, byte[] scanRecord)
 void onDeviceDiscovered(BlepdroidDevice device)
 {
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
