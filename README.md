@@ -1,7 +1,7 @@
 blepdroid
 =========
 
-_B_luetooth _L_ow _E_nergy for _P_rocessing An_droid_
+**B**luetooth **L**ow **E**nergy for **P**rocessing An**droid**
 
 
 Right now optimized for RFDuino but potentially possible for any BLE + GATT device. Very alpha.
