@@ -511,37 +511,86 @@ public class Blepdroid extends Fragment {
 	private void findParentIntention() {
 		try 
 		{
-			
-//			void onDeviceDiscovered(BlepdroidDevice device)
-//			void onServicesDiscovered(ArrayList<String> ids, int status)
-//			void onBluetoothRSSI(String device, int rssi)
-//			void onBluetoothConnection( String device, int state)
-//			void onCharacteristicChanged(String characteristic, byte[] data)
-//			void onDescriptorWrite(String characteristic, String data)
-//			void onDescriptorRead(String characteristic, String data)
-//			void onCharacteristicRead(String characteristic, byte[] data)
-//			void onCharacteristicWrite(String characteristic, String data)
-
-			
 			onServicesDiscoveredMethod = parent.getClass().getMethod( "onServicesDiscovered", new Class[] { ArrayList.class, int.class });
-			onBluetoothRSSIMethod = parent.getClass().getMethod( "onBluetoothRSSI", new Class[] { String.class, int.class });
-			onBluetoothConnectionMethod = parent.getClass().getMethod( "onBluetoothConnection", new Class[] { String.class, int.class });
-			onCharacteristicChangedMethod = parent.getClass().getMethod( "onCharacteristicChanged", new Class[] { String.class, byte[].class }); 
-			onDescriptorWriteMethod = parent.getClass().getMethod( "onDescriptorWrite", new Class[] { String.class, String.class });
-			onDescriptorReadMethod = parent.getClass().getMethod( "onDescriptorRead", new Class[] { String.class, String.class });
-			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, byte[].class });
-			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, byte[].class });
-			
-			//onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
-			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { BlepdroidDevice.class } );
-			PApplet.print(" find parent intention ");
-			PApplet.println(onDeviceDiscoveredMethod);
 		} 
 		catch (NoSuchMethodException e) 
 		{
-			PApplet.println("Did not find all callback methods ");
+			PApplet.println("Did not find onServicesDiscoveredMethods ");
 		}
 		
+		try 
+		{
+		
+			onBluetoothRSSIMethod = parent.getClass().getMethod( "onBluetoothRSSI", new Class[] { String.class, int.class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onBluetoothRSSIMethod ");
+		}
+		
+		try 
+		{
+		
+			onBluetoothConnectionMethod = parent.getClass().getMethod( "onBluetoothConnection", new Class[] { String.class, int.class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onBluetoothConnectionMethod ");
+		}
+		try 
+		{
+		
+			onCharacteristicChangedMethod = parent.getClass().getMethod( "onCharacteristicChanged", new Class[] { String.class, byte[].class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onCharacteristicChangedMethod ");
+		}
+		try 
+		{
+		
+			onDescriptorWriteMethod = parent.getClass().getMethod( "onDescriptorWrite", new Class[] { String.class, String.class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onDescriptorWriteMethod ");
+		}
+		try 
+		{
+			onDescriptorReadMethod = parent.getClass().getMethod( "onDescriptorRead", new Class[] { String.class, String.class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onDescriptorReadMethod ");
+		}
+		
+		try 
+		{
+		
+			onCharacteristicReadMethod = parent.getClass().getMethod( "onCharacteristicRead", new Class[] { String.class, byte[].class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onCharacteristicReadMethod ");
+		}
+		try 
+		{
+		
+			onCharacteristicWriteMethod = parent.getClass().getMethod( "onCharacteristicWrite", new Class[] { String.class, byte[].class });
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onCharacteristicWriteMethod ");
+		}
+		try 
+		{	
+			//onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { String.class, String.class, UUID.class, int.class, byte[].class} );
+			onDeviceDiscoveredMethod = parent.getClass().getMethod( "onDeviceDiscovered", new Class[] { BlepdroidDevice.class } );
+		} 
+		catch (NoSuchMethodException e) 
+		{
+			PApplet.println("Did not find onDeviceDiscoveredMethod ");
+		}
 		try
 		{
 			// do we have service UUIDs?
