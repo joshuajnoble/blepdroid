@@ -294,12 +294,6 @@ public class Blepdroid extends Fragment {
 		}
 	}
 
-
-	public ArrayList<String> getConnectedDeviceNames() {
-		ArrayList<String> devices = new ArrayList<String>();
-		return devices;
-	}
-
 	public boolean connectToDeviceByName(String _name) {
 		return mBluetoothLeService.connect( discoveredDevices.get(_name).address);
 	}
@@ -359,47 +353,6 @@ public class Blepdroid extends Fragment {
 		        scanLeDevice(true);
 //			}
 //		});
-	}
-	
-	public void addDevice( final BluetoothDevice device, int rssi, byte[] scanRecord )
-	{
-
-		UUID uuid = new UUID(0,0);
-		if(device.getUuids() != null && device.getUuids().length > 0)
-		{
-			uuid = device.getUuids()[0].getUuid();
-		}
-		
-		BlepdroidDevice d = new BlepdroidDevice(device.getName(), device.getAddress(), uuid, rssi, scanRecord);
-		if(!discoveredDevices.containsKey(device.getName()))
-		{
-			//PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
-			discoveredDevices.put( device.getName(), d );
-			PApplet.println( Blepdroid.getInstance().onDeviceDiscoveredMethod );
-			
-			
-			try {
-				//Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
-				Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				
-				try {
-					onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
-				} catch (IllegalArgumentException e2) {
-					e2.printStackTrace();
-				} catch (IllegalAccessException e2) {
-					e2.printStackTrace();
-				} catch (InvocationTargetException e2) {
-					e2.printStackTrace();
-				}
-				
-				e.printStackTrace();
-			}
-		}
 	}
 
 	public void writeCharacteristic(UUID characteristic, byte[] data) 
@@ -539,7 +492,6 @@ public class Blepdroid extends Fragment {
 		}
 		try 
 		{
-		
 			onCharacteristicChangedMethod = parent.getClass().getMethod( "onCharacteristicChanged", new Class[] { String.class, byte[].class });
 		} 
 		catch (NoSuchMethodException e) 
@@ -604,6 +556,47 @@ public class Blepdroid extends Fragment {
 
 	}
 	
+
+    public void addDevice( final BluetoothDevice device, int rssi, byte[] scanRecord )
+    {
+
+        UUID uuid = new UUID(0,0);
+        if(device.getUuids() != null && device.getUuids().length > 0)
+        {
+            uuid = device.getUuids()[0].getUuid();
+        }
+        
+        BlepdroidDevice d = new BlepdroidDevice(device.getName(), device.getAddress(), uuid, rssi, scanRecord);
+        if(!discoveredDevices.containsKey(device.getName()))
+        {
+            //PApplet.println( device.getName() + " " + device.getAddress() + " " + rssi + " " + scanRecord);
+            discoveredDevices.put( device.getName(), d );
+            PApplet.println( Blepdroid.getInstance().onDeviceDiscoveredMethod );
+            
+            
+            try {
+                //Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d.name, d.address, d.id, d.rssi, d.scanRecord);
+                Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                
+                try {
+                    onDeviceDiscoveredMethod.invoke(Blepdroid.getInstance().parent, d);
+                } catch (IllegalArgumentException e2) {
+                    e2.printStackTrace();
+                } catch (IllegalAccessException e2) {
+                    e2.printStackTrace();
+                } catch (InvocationTargetException e2) {
+                    e2.printStackTrace();
+                }
+                
+                e.printStackTrace();
+            }
+        }
+    }
 
     private void scanLeDevice(final boolean enable) {
     	PApplet.println(" scanLeDevice ");

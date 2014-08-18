@@ -3,6 +3,7 @@ package blepdroid;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import processing.core.PApplet;
 import android.bluetooth.BluetoothGatt;
@@ -143,12 +144,12 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		
 			Blepdroid.getInstance().servicesDiscovered(gatt, status);
 			
-			ArrayList<String> serviceStrings = new ArrayList<String>();
+			ArrayList<UUID> serviceStrings = new ArrayList<UUID>();
 			List<BluetoothGattService> services = gatt.getServices();
 			
 			for( int i = 0; i < services.size(); i++ )
 			{
-				serviceStrings.add( services.get(i).getUuid().toString());
+				serviceStrings.add( services.get(i).getUuid() );
 			}
 			
 			try {

@@ -43,7 +43,7 @@ void onDeviceDiscovered(BlepdroidDevice device)
   }
 }
 
-void onServicesDiscovered(ArrayList<String> ids, int status)
+void onServicesDiscovered(ArrayList<UUID> ids, int status)
 {
   println(" onServicesDiscovered " + ids );
   println(" 0 means ok, anything else means bad " + status);
@@ -78,7 +78,7 @@ void onBluetoothConnection( String device, int state)
 void onCharacteristicChanged(String characteristic, byte[] data)
 {
   String dataString = new String(data);
-  println(" onCharacteristicChanged " + characteristic + " " + dataString);
+  println(" onCharacteristicChanged " + characteristic + " " + dataString  );
 }
 
 void onDescriptorWrite(String characteristic, String data)
