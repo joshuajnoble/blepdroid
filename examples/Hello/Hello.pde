@@ -77,7 +77,8 @@ void onBluetoothConnection( String device, int state)
 
 void onCharacteristicChanged(String characteristic, byte[] data)
 {
-  println(" onCharacteristicChanged " + characteristic + " " + data);
+  String dataString = new String(data);
+  println(" onCharacteristicChanged " + characteristic + " " + dataString);
 }
 
 void onDescriptorWrite(String characteristic, String data)
