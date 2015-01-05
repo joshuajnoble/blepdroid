@@ -1,9 +1,0 @@
-Compiling this requires a few things:
-
-Eclipse
-Android SDK 20+
-Processing libraries
-
-I just used the Processing Android template found here https://github.com/processing/processing-android-library-template to create the Eclipse project, it's highly recommended.
-
-Build, drop it in the libs folder, and you should be good to go.
