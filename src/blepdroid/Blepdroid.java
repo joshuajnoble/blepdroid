@@ -321,7 +321,6 @@ public class Blepdroid extends Fragment {
 		PApplet.println(" scanDevices ");
 	
 		discoveredDevices.clear();
-		
 
 		if( mHandler == null ) {
 			mHandler = new Handler();
@@ -350,6 +349,7 @@ public class Blepdroid extends Fragment {
 	        }
 	        
 	        scanLeDevice(true);
+
 	}
 
 	public void writeCharacteristic(UUID characteristic, byte[] data) 
@@ -638,4 +638,8 @@ public class Blepdroid extends Fragment {
         }
     };
 
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 4ef511a52ee621181bc17ef25b18cfc54a095579

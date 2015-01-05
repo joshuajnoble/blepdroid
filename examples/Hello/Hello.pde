@@ -20,30 +20,37 @@ void setup() {
 }
 
 void draw() {
+
   background(20);
   fill(255);
-  
+
 }
 
 void mousePressed()
 { 
+
   if(mouseY < 100)
+
   {
     println(" saying hi!");
     String hi = new String("hi");
     Blepdroid.getInstance().writeCharacteristic(RFDUINO_UUID_SEND, hi.getBytes());
   }
+
   else
   {
     println(" scan !");
     Blepdroid.getInstance().scanDevices();
   }
+
 }
 
 void onDeviceDiscovered(BlepdroidDevice device)
 {
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
+
   if(device.name != null && device.name.equals("RFduino"))
+
   {
     Blepdroid.getInstance().connectDevice(device.address);
   }
