@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/Home"/>
-	<classpathentry kind="lib" path="/Users/joshua.noble/Documents/processing/modes/AndroidMode/android-core.zip"/>
-	<classpathentry kind="lib" path="/Users/joshua.noble/code/android/adt/sdk/platforms/android-20/android.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-7-openjdk-amd64"/>
+	<classpathentry kind="lib" path="/home/joshuajnoble/clanguages/processing/modes/AndroidMode/android-core.zip"/>
+	<classpathentry kind="lib" path="/home/joshuajnoble/clanguages/android/android-sdk-linux/platforms/android-20/android.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
