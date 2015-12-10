@@ -125,7 +125,8 @@ public class Blepdroid extends Fragment {
     public final static String ACTION_DATA_AVAILABLE = "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
 
-	public static void initialize(Context parent)
+	//public static void initialize(Context parent)
+    public static void initialize(PApplet parent)
 	{
 		PApplet pparent = (PApplet) parent;
 		pparent.getFragmentManager().beginTransaction().add(
@@ -250,14 +251,14 @@ public class Blepdroid extends Fragment {
         }
     };
 	
-	public Blepdroid(Context _parent) {
+	public Blepdroid(PApplet _parent) {
 		
 		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
 
 		if(blepdroidSingleton != null)
 			return;
 		
-		this.parentContext = _parent;
+//		this.parentContext = _parent;
 		this.parent = (PApplet) _parent;
 		
 		discoveredDevices = new HashMap<String, BlepdroidDevice>();
@@ -332,20 +333,20 @@ public class Blepdroid extends Fragment {
 		
 		        // Use this check to determine whether BLE is supported on the device.  Then you can
 		        // selectively disable BLE-related features.
-		        if (!parent.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-		        	Toast.makeText(Blepdroid.getInstance().parent, "BLE Not Supported", Toast.LENGTH_SHORT).show();
+		        if (!parent.getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+		        	Toast.makeText(Blepdroid.getInstance().parent.getActivity(), "BLE Not Supported", Toast.LENGTH_SHORT).show();
 		        	PApplet.println(" BLE Not Supported ");
 		            //finish();
 		        }
 		
 		        // Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
 		        // BluetoothAdapter through BluetoothManager.
-		        final BluetoothManager bluetoothManager = (BluetoothManager) parent.getSystemService(Context.BLUETOOTH_SERVICE);
+		        final BluetoothManager bluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
 		        mBluetoothAdapter = bluetoothManager.getAdapter();
 		
 		        // Checks if Bluetooth is supported on the device.
 		        if (mBluetoothAdapter == null) {
-		        	Toast.makeText(Blepdroid.getInstance().parent, "BLE Not Supported", Toast.LENGTH_SHORT).show();
+		        	Toast.makeText(Blepdroid.getInstance().parent.getActivity(), "BLE Not Supported", Toast.LENGTH_SHORT).show();
 		        	PApplet.println(" BLE Not Supported ");
 		            return;
 		        }
@@ -601,7 +602,7 @@ public class Blepdroid extends Fragment {
     private void scanLeDevice(final boolean enable) {
     	PApplet.println(" scanLeDevice ");
         if (enable) {
-    		parent.runOnUiThread( new Runnable()
+        	parent.getActivity().runOnUiThread( new Runnable()
     		{
     			public void run()
     			{
@@ -632,7 +633,7 @@ public class Blepdroid extends Fragment {
 
         @Override
         public void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
-            parent.runOnUiThread(new Runnable() {
+        	parent.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     Blepdroid.getInstance().addDevice(device, rssi, scanRecord);

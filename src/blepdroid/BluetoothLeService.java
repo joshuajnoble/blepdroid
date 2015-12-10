@@ -93,7 +93,7 @@ public class BluetoothLeService extends Service {
 		PApplet.println(" Initializing BluetoothManager.");
 		
 		if (mBluetoothManager == null) {
-			mBluetoothManager = (BluetoothManager) parent.getSystemService(Context.BLUETOOTH_SERVICE);
+			mBluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
 			if (mBluetoothManager == null) {
 				PApplet.println(TAG + "Unable to initialize BluetoothManager.");
 				return false;
@@ -150,6 +150,11 @@ public class BluetoothLeService extends Service {
 		
 		// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
 		mBluetoothGatt = device.connectGatt(this, false, Blepdroid.getInstance().gattCallback);
+		
+		if(mBluetoothGatt == null )
+		{
+			PApplet.println(" BluetoothLeService::connect NO mBluetoothGatt created ");
+		}
 		PApplet.println(TAG + "Trying to create a new connection.");
 		mBluetoothDeviceAddress = address;
 		mConnectionState = STATE_CONNECTING;
@@ -237,7 +242,10 @@ public class BluetoothLeService extends Service {
 			return;
 		}
 
-		
+	  if(mBluetoothGattService == null) {
+		  PApplet.println("WTF no mBluetoothGattService");
+		  return;
+	  }
       BluetoothGattCharacteristic receiveCharacteristic = mBluetoothGattService.getCharacteristic(uuid);
       if (receiveCharacteristic != null) {
           BluetoothGattDescriptor receiveConfigDescriptor = receiveCharacteristic.getDescriptor(clientConfig);
