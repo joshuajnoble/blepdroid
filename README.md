@@ -126,3 +126,12 @@ void writeCharacteristic(UUID characteristic, byte[] data);
 ```
 
 Finally, this sends data to a characteristic that the device+service has.
+
+
+## Building this ##
+
+You'll need to edit your classpath in the project settings like so:
+
+![alt tag](build_path.png)
+
+After that you can then select the project and then do Export, Jar, and set it to export to your Processing libraries library folder
