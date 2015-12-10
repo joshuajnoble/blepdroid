@@ -1,9 +1,5 @@
 package com.lannbox.rfduinotest;
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 9dafd27128a3c6ab78d05825e83c0d1871dce52c
 import org.apache.http.util.ByteArrayBuffer;
 
 public class HexAsciiHelper {
