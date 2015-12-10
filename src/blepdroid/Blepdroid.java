@@ -322,6 +322,10 @@ public class Blepdroid extends Fragment {
 		PApplet.println(" scanDevices ");
 	
 		discoveredDevices.clear();
+
+		if( mHandler == null ) {
+			mHandler = new Handler();
+		}
 		
 //		parent.runOnUiThread( new Runnable()
 //		{
@@ -641,5 +645,5 @@ public class Blepdroid extends Fragment {
             });
         }
     };
-
 }
+

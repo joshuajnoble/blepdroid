@@ -1,9 +1,16 @@
 package com.lannbox.rfduinotest;
 
+<<<<<<< HEAD
 import java.util.UUID;
 
 import android.bluetooth.BluetoothDevice;
 
+=======
+import android.bluetooth.BluetoothDevice;
+
+import java.util.UUID;
+
+>>>>>>> 9dafd27128a3c6ab78d05825e83c0d1871dce52c
 public class BluetoothHelper {
     public static String shortUuidFormat = "0000%04X-0000-1000-8000-00805F9B34FB";
 
