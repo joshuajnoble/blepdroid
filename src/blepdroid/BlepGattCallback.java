@@ -18,8 +18,7 @@ public class BlepGattCallback extends BluetoothGattCallback {
 	public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
 	{
 		try {
-			Blepdroid.getInstance().onCharacteristicChangedMethod.invoke( Blepdroid.getInstance().parent, characteristic.getUuid().toString(), 
-					characteristic.getValue());
+			Blepdroid.getInstance().onCharacteristicChangedMethod.invoke( Blepdroid.getInstance().parent, characteristic.getUuid().toString(), characteristic.getValue());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {

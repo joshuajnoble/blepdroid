@@ -147,10 +147,19 @@ public class Blepdroid extends Fragment {
     	
         super.onCreate(savedInstanceState);
         
-        Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
-        getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+        Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
         
-        getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        // the problem is here: never getting called for some reason
+        if(parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE))
+        {
+        	PApplet.println(" service bound ");
+        }
+        else
+        {
+        	PApplet.println(" service cannot be bound ");
+        }
+        
+        parent.getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
     @Override
@@ -159,7 +168,7 @@ public class Blepdroid extends Fragment {
     	PApplet.println(" BlepDroid on onResume ");
     	
         super.onResume();
-        getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        parent.getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
         
         // won't need this once we're done, hopefully
         if(onDeviceDiscoveredMethod == null)
@@ -180,7 +189,7 @@ public class Blepdroid extends Fragment {
         	PApplet.println(" mBluetoothLeService is null ");
         	
 			Intent gattServiceIntent = new Intent(getActivity(), BluetoothLeService.class);
-			getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+			parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
 			
 			scanDevices();
         }
@@ -189,14 +198,20 @@ public class Blepdroid extends Fragment {
     @Override
 	public void onPause() {
         super.onPause();
+        
+        PApplet.println(" on pause ");
+        
         mBluetoothLeService.disconnect();
-        getActivity().unregisterReceiver(mGattUpdateReceiver);
+        parent.getActivity().unregisterReceiver(mGattUpdateReceiver);
     }
 
     @Override
 	public void onDestroy() {
         super.onDestroy();
-        getActivity().unbindService(mServiceConnection);
+        
+        PApplet.println(" on destroy ");
+        
+        parent.getActivity().unbindService(mServiceConnection);
         //getActivity().unregisterReceiver(mGattUpdateReceiver);
         mBluetoothLeService.close();
         mBluetoothLeService = null;
@@ -235,18 +250,12 @@ public class Blepdroid extends Fragment {
             final String action = intent.getAction();
             if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
                 mConnected = true;
-                //updateConnectionState(R.string.connected);
-                //invalidateOptionsMenu();
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 mConnected = false;
-                //updateConnectionState(R.string.disconnected);
-//                invalidateOptionsMenu();
-//                clearUI();
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 // Show all the supported services and characteristics on the user interface.
                 parseGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                //displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
             }
         }
     };
@@ -299,7 +308,7 @@ public class Blepdroid extends Fragment {
 		return mBluetoothLeService.connect( discoveredDevices.get(_name).address);
 	}
 
-	public void connectDevice(String _hwAddress) {
+	public boolean connectDevice(String _hwAddress) {
 		
 		hwAddressToConnect = _hwAddress;
 		
@@ -308,7 +317,16 @@ public class Blepdroid extends Fragment {
 //		{
 //			public void run()
 //			{
-				mBluetoothLeService.connect(Blepdroid.getInstance().hwAddressToConnect);
+		if(mBluetoothLeService != null)
+		{
+			PApplet.println(" connectDevice::connected device ");
+			return mBluetoothLeService.connect(Blepdroid.getInstance().hwAddressToConnect);
+		}
+		else
+		{
+			PApplet.println(" connectDevice::can't connect device ");
+			return false;
+		}
 //			}
 //		});
 	}
@@ -331,7 +349,7 @@ public class Blepdroid extends Fragment {
 //		{
 //			public void run()
 //			{
-				mHandler = new Handler();
+//				mHandler = new Handler();
 				
 				PApplet.println(" check functionality ");
 		
