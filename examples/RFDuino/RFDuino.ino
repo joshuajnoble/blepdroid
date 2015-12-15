@@ -22,6 +22,12 @@ void RFduinoBLE_onReceive(char *data, int len)
   RFduinoBLE.send(hello, 5);
 }
 
+void RFduinoBLE_onDisconnect()
+{
+  RFduinoBLE.stop();
+  RFduinoBLE.begin();
+}
+
 void loop() {
 
 }
