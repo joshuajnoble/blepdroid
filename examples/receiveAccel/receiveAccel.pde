@@ -19,7 +19,7 @@ PVector accelerator;
 void setup() {
   size(600, 800, P3D);
   
-  Blepdroid.initialize( (Context) this);
+  Blepdroid.initialize(  this);
   
   accelerator = new PVector();
   accelerator.x = width/2;
