@@ -5,6 +5,8 @@ blepdroid
 
 Right now optimized for RFDuino but potentially possible for any BLE + GATT device. We've tested this library with the following devices: Red Bear BLE Nano, RFDuino, nRF8001 and it should work with the Bluefruit LE UART Friend as well as anything else BLE compatible. You'll want to get service/characteristic IDs to make connecting to a preconfigured device and service easier, or you could always just code up your own service/characteristic device set.
 
+For instance, if you needed to connect to a BLE device that you knew basically nothing about, you'd power up your device, and in your Processing app scan for devices, connect to the device that you're interested in and scan for services and then scan for characteristics.
+
 ##Glossary##
 
 Ok, first let's talk terminology.
