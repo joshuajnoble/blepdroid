@@ -18,8 +18,8 @@ public static UUID BLENANO_UUID_RECEIVE = UUID.fromString("713D0002-503E-4C75-BA
 public static UUID BLENANO_UUID_SEND = UUID.fromString("713D0003-503E-4C75-BA94-3148F18D941E");
 
 
-BlepdroidDevice felix1;
-BlepdroidDevice felix2;
+BlepdroidDevice device1;
+BlepdroidDevice device2;
 
 boolean allSetUp = false;
 
@@ -45,9 +45,9 @@ void mousePressed()
   {
     println(" saying hi!");
     String hi = new String("hi");
-    Blepdroid.getInstance().writeCharacteristic(felix1, RFDUINO_UUID_SEND, hi.getBytes());
+    Blepdroid.getInstance().writeCharacteristic(device1, RFDUINO_UUID_SEND, hi.getBytes());
     delay(400);
-    Blepdroid.getInstance().writeCharacteristic(felix2, RFDUINO_UUID_SEND, hi.getBytes());
+    Blepdroid.getInstance().writeCharacteristic(device2, RFDUINO_UUID_SEND, hi.getBytes());
   } else
   {
     println(" scan !");
@@ -59,31 +59,31 @@ void onDeviceDiscovered(BlepdroidDevice device)
 {
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
 
-  if (device.name != null && device.name.equals("felix1"))
+  if (device.name != null && device.name.equals("device1"))
   {
     if (Blepdroid.getInstance().connectDevice(device))
     {
-      println(" connected felix 1 ");
+      println(" connected device 1 ");
       
-      felix1 = device;
+      device1 = device;
       
     } else
     {
-      println(" couldn't connect ");
+      println(" couldn't connect device 1 ");
     }
   }
   
-  if (device.name != null && device.name.equals("felix2"))
+  if (device.name != null && device.name.equals("device2"))
   {
     if (Blepdroid.getInstance().connectDevice(device))
     {
-      println(" connected felix 2 ");
+      println(" connected device 2 ");
       
-      felix2 = device;
+      device2 = device;
       
     } else
     {
-      println(" couldn't connect ");
+      println(" couldn't connect device 2 ");
     }
   }
   
@@ -92,6 +92,20 @@ void onDeviceDiscovered(BlepdroidDevice device)
 
 void onServicesDiscovered(BlepdroidDevice device, int status)
 {
+  
+  HashMap<String, ArrayList<String>> servicesAndCharas = Blepdroid.getInstance().findAllServicesCharacteristics(device);
+  
+  for( String service : servicesAndCharas.keySet())
+  {
+    print( service + " has " );
+    
+    // this will list the UUIDs of each service, in the future we're going to make
+    // this tell you more about each characteristic, e.g. whether it's readable or writable
+    println( servicesAndCharas.get(service));
+    
+  }
+  
+  // we want to set this for whatever device we just connected to
   Blepdroid.getInstance().setCharacteristicToListen(device, RFDUINO_UUID_RECEIVE);
 
   allSetUp = true;
@@ -105,10 +119,6 @@ void onBluetoothRSSI(BlepdroidDevice device, int rssi)
 
 void onBluetoothConnection( BlepdroidDevice device, int state)
 {
-  println(" ============================================================ ");
-  println(" HELLO SKETCH ");
-  println(" onBluetoothConnection " + device.address + " " + state);
-  println(" ============================================================ ");
   Blepdroid.getInstance().discoverServices(device);
 }
 
