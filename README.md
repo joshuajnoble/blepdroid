@@ -3,8 +3,7 @@ blepdroid
 
 **B**​luetooth **L**​ow **E**​nergy for **P**​rocessing An​**droid**
 
-
-Right now optimized for RFDuino but potentially possible for any BLE + GATT device. Very alpha.
+Right now optimized for RFDuino but potentially possible for any BLE + GATT device. We've tested this library with the following devices: Red Bear BLE Nano, RFDuino, nRF8001 and it should work with the Bluefruit LE UART Friend as well as anything else BLE compatible. You'll want to get service/characteristic IDs to make connecting to a preconfigured device and service easier, or you could always just code up your own service/characteristic device set.
 
 ##Glossary##
 
