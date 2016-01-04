@@ -16,7 +16,7 @@ byte rgb[3];
 void setup() {
   size(400,400);
   smooth();
-  Blepdroid.initialize( (Context) this);
+  Blepdroid.initialize(this);
 }
 
 void draw() {

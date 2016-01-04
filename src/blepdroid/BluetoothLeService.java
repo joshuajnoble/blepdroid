@@ -34,6 +34,9 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 /**
  * Service for managing connection and data communication with a GATT server
  * hosted on a given Bluetooth LE device.
@@ -43,9 +46,13 @@ public class BluetoothLeService extends Service {
 
 	private BluetoothManager mBluetoothManager;
 	private BluetoothAdapter mBluetoothAdapter;
-	private String mBluetoothDeviceAddress;
-	private BluetoothGatt mBluetoothGatt;
-	private BluetoothGattService mBluetoothGattService;
+	// private String mBluetoothDeviceAddress;
+	// private BluetoothGatt mBluetoothGatt;
+	// private BluetoothGattService mBluetoothGattService;
+
+	// private ConcurrentLinkedQueue<BluetoothGattService> mQueue;
+	private ConcurrentHashMap<String, BluetoothGatt> mGatts;
+
 	private int mConnectionState = STATE_DISCONNECTED;
 
 	private static final int STATE_DISCONNECTED = 0;
@@ -76,7 +83,7 @@ public class BluetoothLeService extends Service {
 		// such that resources are cleaned up properly. In this particular
 		// example, close() is
 		// invoked when the UI is disconnected from the Service.
-		close();
+		closeAll();
 		return super.onUnbind(intent);
 	}
 
@@ -87,11 +94,12 @@ public class BluetoothLeService extends Service {
 	 * 
 	 * @return Return true if the initialization is successful.
 	 */
-	public boolean initialize( PApplet parent ) {
-		// For API level 18 and above, get a reference to BluetoothAdapter through BluetoothManager.
-		
+	public boolean initialize(PApplet parent) {
+		// For API level 18 and above, get a reference to BluetoothAdapter
+		// through BluetoothManager.
+
 		PApplet.println(" Initializing BluetoothManager.");
-		
+
 		if (mBluetoothManager == null) {
 			mBluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
 			if (mBluetoothManager == null) {
@@ -105,7 +113,11 @@ public class BluetoothLeService extends Service {
 			PApplet.println(TAG + "Unable to obtain a BluetoothAdapter.");
 			return false;
 		}
+		
+		mGatts = new ConcurrentHashMap<String, BluetoothGatt>();
 
+		PApplet.println(" Have a bluetooth manager ");
+		
 		return true;
 	}
 
@@ -120,44 +132,77 @@ public class BluetoothLeService extends Service {
 	 *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
 	 *         callback.
 	 */
-	public boolean connect(final String address) {
-		
+	public boolean connect( BlepdroidDevice device ) {
+
 		PApplet.println(" BluetoothLEService connectDevice ");
-		
-		if (mBluetoothAdapter == null || address == null) {
-			PApplet.println(TAG + "BluetoothAdapter not initialized or unspecified address.");
+
+		if (mBluetoothAdapter == null || device.address == null) {
+			PApplet.println(device.address + "BluetoothAdapter not initialized or unspecified address.");
 			return false;
 		}
 
+		// if (mBluetoothDeviceAddress != null &&
+		// address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null) {
+		//
+		// PApplet.println(TAG +
+		// "Trying to use an existing mBluetoothGatt for connection.");
+		//
+		// if (mBluetoothGatt.connect()) {
+		// mConnectionState = STATE_CONNECTING;
+		// return true;
+		// } else {
+		// return false;
+		// }
+		// }
+
 		// Previously connected device. Try to reconnect.
-		if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null) {
-			
-			PApplet.println(TAG + "Trying to use an existing mBluetoothGatt for connection.");
-			
-			if (mBluetoothGatt.connect()) {
-				mConnectionState = STATE_CONNECTING;
-				return true;
-			} else {
-				return false;
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				if (mGatts.get(s).connect()) {
+					return true;
+				} else {
+					return false;
+				}
 			}
 		}
+		
+		PApplet.println(" BluetoothLeService::connect GattDevice not found, making a new one ");
 
-		final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-		if (device == null) {
+		//
+		// final BluetoothDevice device =
+		// mBluetoothAdapter.getRemoteDevice(address);
+		// if (device == null) {
+		// PApplet.println(TAG + "Device not found.  Unable to connect.");
+		// return false;
+		// }
+		//
+		// // We want to directly connect to the device, so we are setting the
+		// autoConnect parameter to false.
+		// mBluetoothGatt = device.connectGatt(this, false,
+		// Blepdroid.getInstance().gattCallback);
+		//
+		// if(mBluetoothGatt == null )
+		// {
+		// PApplet.println(" BluetoothLeService::connect NO mBluetoothGatt created ");
+		// }
+		// PApplet.println(TAG + "Trying to create a new connection.");
+		// mBluetoothDeviceAddress = address;
+		// mConnectionState = STATE_CONNECTING;
+		// return true;
+
+		// it's not an existing device?
+		final BluetoothDevice bleDevice = mBluetoothAdapter.getRemoteDevice(device.address);
+		
+		if (bleDevice == null) {
 			PApplet.println(TAG + "Device not found.  Unable to connect.");
 			return false;
 		}
+
+		PApplet.println(" BluetoothLeService::connect connectGatt ");
 		
-		// We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-		mBluetoothGatt = device.connectGatt(this, false, Blepdroid.getInstance().gattCallback);
-		
-		if(mBluetoothGatt == null )
-		{
-			PApplet.println(" BluetoothLeService::connect NO mBluetoothGatt created ");
-		}
-		PApplet.println(TAG + "Trying to create a new connection.");
-		mBluetoothDeviceAddress = address;
-		mConnectionState = STATE_CONNECTING;
+		BluetoothGatt gatt = bleDevice.connectGatt(this, false, Blepdroid.getInstance().gattCallback);
+		mGatts.put(device.address, gatt);
+
 		return true;
 	}
 
@@ -167,44 +212,104 @@ public class BluetoothLeService extends Service {
 	 * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
 	 * callback.
 	 */
-	public void disconnect() {
-		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-			//Log.w(TAG, "BluetoothAdapter not initialized");
-			return;
+	public void disconnect(BlepdroidDevice device) {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// //Log.w(TAG, "BluetoothAdapter not initialized");
+		// return;
+		// }
+		// mBluetoothGatt.disconnect();
+
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				mGatts.get(s).disconnect();
+			}
 		}
-		mBluetoothGatt.disconnect();
+	}
+
+	public void disconnectAll() {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// //Log.w(TAG, "BluetoothAdapter not initialized");
+		// return;
+		// }
+		// mBluetoothGatt.disconnect();
+
+		for (String s : mGatts.keySet()) {
+			mGatts.get(s).disconnect();
+		}
+	}
+
+	public void close(BlepdroidDevice device) {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// //Log.w(TAG, "BluetoothAdapter not initialized");
+		// return;
+		// }
+		// mBluetoothGatt.disconnect();
+
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				mGatts.get(s).close();
+				mGatts.remove(s);
+			}
+		}
 	}
 
 	/**
 	 * After using a given BLE device, the app must call this method to ensure
 	 * resources are released properly.
 	 */
-	public void close() {
-		if (mBluetoothGatt == null) {
-			return;
+	public void closeAll() {
+		for (String s : mGatts.keySet()) {
+			mGatts.get(s).close();
 		}
-		mBluetoothGatt.close();
-		mBluetoothGatt = null;
+		mGatts.clear();
+		
 	}
 
 	/**
-	 * Write to {@code BluetoothGattCharacteristic}. The read
-	 * result is reported asynchronously through the
+	 * Write to {@code BluetoothGattCharacteristic}. The read result is reported
+	 * asynchronously through the
 	 * {@code BluetoothGattCallback#onCharacteristicWrite(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
 	 * callback.
 	 * 
 	 * @param characteristic
 	 *            The characteristic to read from.
 	 */
-	public void writeCharacteristic(UUID characteristicID, byte[] value) {
-		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-			Log.w(TAG, "BluetoothAdapter not initialized");
-			return;
+	public void writeCharacteristic(BlepdroidDevice device, UUID characteristicID, byte[] value) {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// Log.w(TAG, "BluetoothAdapter not initialized");
+		// return;
+		// }
+//		PApplet.println( " writing char " + device.address + " " + characteristicID );
+		
+		if(device == null)
+		{
+			PApplet.println( " no device? ");
 		}
 		
-		BluetoothGattCharacteristic characteristic = mBluetoothGattService.getCharacteristic(characteristicID);
-		characteristic.setValue(value);
-		mBluetoothGatt.writeCharacteristic(characteristic);
+		for (String s : mGatts.keySet()) {
+
+			if (s.equals(device.address)) {
+				
+				for (BluetoothGattService service : mGatts.get(s).getServices()) {
+					// if(service.getCharacteristics().contains(o))
+					List<BluetoothGattCharacteristic> charList = service.getCharacteristics();
+					
+					for (BluetoothGattCharacteristic chart : charList) {
+
+						if (chart.getUuid().equals(characteristicID)) {
+							chart.setValue(value);
+							PApplet.println(" successfully wrote char ");
+							mGatts.get(s).writeCharacteristic(chart);
+						}
+					}
+				}
+			}
+		}
+		//
+		// BluetoothGattCharacteristic characteristic =
+		// mBluetoothGattService.getCharacteristic(characteristicID);
+		// characteristic.setValue(value);
+		// mBluetoothGatt.writeCharacteristic(characteristic);
 	}
 
 	/**
@@ -216,89 +321,140 @@ public class BluetoothLeService extends Service {
 	 * @param characteristic
 	 *            The characteristic to read from.
 	 */
-	public void readCharacteristic(UUID characteristicID) {
-		
-		BluetoothGattCharacteristic characteristic = mBluetoothGattService.getCharacteristic(characteristicID);
-		
-		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-			PApplet.println(TAG + "BluetoothAdapter not initialized");
-			return;
+	public void readCharacteristic(BlepdroidDevice device, UUID characteristicID) {
+
+		// BluetoothGattCharacteristic characteristic =
+		// mBluetoothGattService.getCharacteristic(characteristicID);
+		//
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// PApplet.println(TAG + "BluetoothAdapter not initialized");
+		// return;
+		// }
+		//
+		// mBluetoothGatt.readCharacteristic(characteristic);
+
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				for (BluetoothGattService service : mGatts.get(s).getServices()) {
+					// if(service.getCharacteristics().contains(o))
+					List<BluetoothGattCharacteristic> charList = service
+							.getCharacteristics();
+					for (BluetoothGattCharacteristic chart : charList) {
+						if (chart.getUuid().equals(characteristicID)) {
+							mGatts.get(s).readCharacteristic(chart);
+						}
+					}
+				}
+			}
 		}
-		
-		mBluetoothGatt.readCharacteristic(characteristic);
-	}
-	
-	public void readRSSI() {
-		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-			PApplet.println(TAG + "BluetoothAdapter not initialized");
-			return;
-		}
-		mBluetoothGatt.readRemoteRssi();
+
 	}
 
-	public void setCharacteristicNotification(UUID uuid, UUID clientConfig, boolean enabled) {
-		if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-			PApplet.println(TAG + "BluetoothAdapter not initialized");
-			return;
+	public void readRSSI(BlepdroidDevice device) {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// PApplet.println(TAG + "BluetoothAdapter not initialized");
+		// return;
+		// }
+		// mBluetoothGatt.readRemoteRssi();
+
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				mGatts.get(s).readRemoteRssi();
+			}
 		}
 
-	  if(mBluetoothGattService == null) {
-		  PApplet.println("WTF no mBluetoothGattService");
-		  return;
-	  }
-      BluetoothGattCharacteristic receiveCharacteristic = mBluetoothGattService.getCharacteristic(uuid);
-      if (receiveCharacteristic != null) {
-          BluetoothGattDescriptor receiveConfigDescriptor = receiveCharacteristic.getDescriptor(clientConfig);
-          if (receiveConfigDescriptor != null) {
-              mBluetoothGatt.setCharacteristicNotification(receiveCharacteristic, true);
-
-              receiveConfigDescriptor.setValue( BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-              mBluetoothGatt.writeDescriptor(receiveConfigDescriptor);
-          } else {
-             PApplet.println( "RFduino receive config descriptor not found!");
-          }
-
-      } else {
-    	  PApplet.println( "RFduino receive characteristic not found!");
-      }
-
-		
-	}
-	
-	public boolean createService(UUID service)
-	{
-        mBluetoothGattService = mBluetoothGatt.getService(service);
-        if (mBluetoothGattService == null) {
-            Log.e(TAG, "RFduino GATT service not found!");
-            return false;
-        }
-        
-        return true;
 	}
 
-//            BluetoothGattCharacteristic receiveCharacteristic = mBluetoothGattService.getCharacteristic(UUID_RECEIVE);
-//            if (receiveCharacteristic != null) {
-//                BluetoothGattDescriptor receiveConfigDescriptor = receiveCharacteristic.getDescriptor(UUID_CLIENT_CONFIGURATION);
-//                if (receiveConfigDescriptor != null) {
-//                    gatt.setCharacteristicNotification(receiveCharacteristic, true);
+	public void setCharacteristicNotification(BlepdroidDevice device, UUID uuid,
+			UUID clientConfig, boolean enabled) {
+		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+		// PApplet.println(TAG + "BluetoothAdapter not initialized");
+		// return;
+		// }
+		//
+		// if(mBluetoothGattService == null) {
+		// PApplet.println("WTF no mBluetoothGattService");
+		// return;
+		// }
+		// BluetoothGattCharacteristic receiveCharacteristic =
+		// mBluetoothGattService.getCharacteristic(uuid);
+		// if (receiveCharacteristic != null) {
+		// BluetoothGattDescriptor receiveConfigDescriptor =
+		// receiveCharacteristic.getDescriptor(clientConfig);
+		// if (receiveConfigDescriptor != null) {
+		// mBluetoothGatt.setCharacteristicNotification(receiveCharacteristic,
+		// true);
+		//
+		// receiveConfigDescriptor.setValue(
+		// BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+		// mBluetoothGatt.writeDescriptor(receiveConfigDescriptor);
+		// } else {
+		// PApplet.println( "RFduino receive config descriptor not found!");
+		// }
+		//
+		// } else {
+		// PApplet.println( "RFduino receive characteristic not found!");
+		// }
+
+		for (String s : mGatts.keySet()) {
+			if (s.equals(device.address)) {
+				for (BluetoothGattService service : mGatts.get(s).getServices()) {
+					// if(service.getCharacteristics().contains(o))
+					List<BluetoothGattCharacteristic> charList = service
+							.getCharacteristics();
+					for (BluetoothGattCharacteristic chart : charList) {
+						if (chart.getUuid().equals(uuid)) {
+							BluetoothGattDescriptor receiveConfigDescriptor = chart
+									.getDescriptor(clientConfig);
+							if (receiveConfigDescriptor != null) {
+								mGatts.get(s).setCharacteristicNotification(
+										chart, true);
+
+								receiveConfigDescriptor
+										.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+								mGatts.get(s).writeDescriptor(
+										receiveConfigDescriptor);
+							} else {
+								PApplet.println("RFduino receive config descriptor not found!");
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
 //
-//                    receiveConfigDescriptor.setValue( BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-//                    gatt.writeDescriptor(receiveConfigDescriptor);
-//                } else {
-//                    Log.e(TAG, "RFduino receive config descriptor not found!");
-//                }
-//
-//            } else {
-//                Log.e(TAG, "RFduino receive characteristic not found!");
-//            }
-//        }
-//		
-//		return mBluetoothGatt;
-//	}
-	
-	public boolean discoverServices()
-	{
-		return mBluetoothGatt.discoverServices();
+	public boolean queryService(BlepdroidDevice device, UUID serviceId) {
+
+		for (String s : mGatts.keySet()) 
+		{
+			if (s.equals(device.address)) 
+			{
+				for (BluetoothGattService service : mGatts.get(s).getServices()) 
+				{
+					if(service.getUuid().equals(serviceId))
+					{
+						return true;
+					}
+				}
+			}
+		}
+		
+		return false;
+	}
+
+	public boolean discoverServices(BlepdroidDevice device) {
+
+//		return mBluetoothGatt.discoverServices();
+		
+		for (String s : mGatts.keySet()) {
+			if(s.equals(device.address)) {
+				PApplet.println(" BLE SERVICE DISCOVERING SERVICE ");
+				return mGatts.get(s).discoverServices();
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -308,12 +464,24 @@ public class BluetoothLeService extends Service {
 	 * 
 	 * @return A {@code List} of supported services.
 	 */
-	public List<BluetoothGattService> getSupportedGattServices() {
-		if (mBluetoothGatt == null) {
-			PApplet.println(" getSupportedGattServices no gatt object ");
-			return null;
+	public List<BluetoothGattService> getSupportedGattServices( String address ) {
+//		if (mBluetoothGatt == null) {
+//			PApplet.println(" getSupportedGattServices no gatt object ");
+//			return null;
+//		}
+//
+//		return mBluetoothGatt.getServices();
+		
+		for (String s : mGatts.keySet()) {
+			if (s.equals(address)) {
+				return mGatts.get(s).getServices();
+			}
 		}
-
-		return mBluetoothGatt.getServices();
+		
+		//List<BluetoothGattService> empty = new List<BluetoothGattService>(); // can't do this?
+		//return empty;
+		
+		return null; // risky?
+		
 	}
 }
