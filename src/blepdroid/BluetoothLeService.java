@@ -16,8 +16,10 @@
 
 package blepdroid;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import processing.core.PApplet;
 import android.app.Service;
@@ -32,10 +34,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Service for managing connection and data communication with a GATT server
@@ -52,12 +50,6 @@ public class BluetoothLeService extends Service {
 
 	// private ConcurrentLinkedQueue<BluetoothGattService> mQueue;
 	private ConcurrentHashMap<String, BluetoothGatt> mGatts;
-
-	private int mConnectionState = STATE_DISCONNECTED;
-
-	private static final int STATE_DISCONNECTED = 0;
-	private static final int STATE_CONNECTING = 1;
-	private static final int STATE_CONNECTED = 2;
 
 	public final static String ACTION_GATT_CONNECTED = "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
 	public final static String ACTION_GATT_DISCONNECTED = "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
@@ -450,7 +442,6 @@ public class BluetoothLeService extends Service {
 		
 		for (String s : mGatts.keySet()) {
 			if(s.equals(device.address)) {
-				PApplet.println(" BLE SERVICE DISCOVERING SERVICE ");
 				return mGatts.get(s).discoverServices();
 			}
 		}
@@ -478,10 +469,7 @@ public class BluetoothLeService extends Service {
 			}
 		}
 		
-		//List<BluetoothGattService> empty = new List<BluetoothGattService>(); // can't do this?
-		//return empty;
-		
-		return null; // risky?
-		
+		ArrayList<BluetoothGattService> empty = new ArrayList<BluetoothGattService>(); // can't do this?
+		return empty;
 	}
 }
