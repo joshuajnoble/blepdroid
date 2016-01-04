@@ -5,14 +5,14 @@ import android.os.Bundle;
 import android.content.Context;
 import java.util.UUID;
 
-
+// here's some RFDuino values
 public static UUID RFDUINO_UUID_SERVICE = BluetoothHelper.sixteenBitUuid(0x2220);
 public static UUID RFDUINO_UUID_RECEIVE = BluetoothHelper.sixteenBitUuid(0x2221);
 public static UUID RFDUINO_UUID_SEND = BluetoothHelper.sixteenBitUuid(0x2222);
 public static UUID RFDUINO_UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x2223);
 public static UUID RFDUINO_UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
 
-// just some example objects
+// here's some BLE values
 public static UUID BLENANO_UUID_SERVICE = UUID.fromString( "713D0000-503E-4C75-BA94-3148F18D941E");
 public static UUID BLENANO_UUID_RECEIVE = UUID.fromString("713D0002-503E-4C75-BA94-3148F18D941E");
 public static UUID BLENANO_UUID_SEND = UUID.fromString("713D0003-503E-4C75-BA94-3148F18D941E");
