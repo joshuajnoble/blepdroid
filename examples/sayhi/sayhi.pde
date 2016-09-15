@@ -11,7 +11,7 @@ public static UUID RFDUINO_UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x22
 public static UUID RFDUINO_UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
 
 boolean allSetUp = false;
-
+BlepdroidDevice bdDevice;
 
 void setup() {
   size(400,400);
@@ -30,7 +30,7 @@ void mousePressed()
   {
     println(" saying hi!");
     String hi = new String("hi");
-    Blepdroid.getInstance().writeCharacteristic(RFDUINO_UUID_SEND, hi.getBytes());
+    Blepdroid.getInstance().writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, hi.getBytes());
   }
 }
 
@@ -39,7 +39,10 @@ void onDeviceDiscovered(BlepdroidDevice device)
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
   if(device.name.equals("RFduino"))
   {
-    Blepdroid.getInstance().connectDevice(device.address);
+    if(Blepdroid.getInstance().connectDevice(device))
+    {
+      bdDevice = device;
+    }
   }
 }
 
@@ -48,15 +51,14 @@ void onServicesDiscovered(ArrayList<UUID> ids, int status)
   println(" onServicesDiscovered " + ids );
   println(" 0 means ok, anything else means bad " + status);
   
-  HashMap<String, ArrayList<String>> servicesAndCharas = Blepdroid.getInstance().findAllServicesCharacteristics();
+  HashMap<String, ArrayList<String>> servicesAndCharas = Blepdroid.getInstance().findAllServicesCharacteristics(bdDevice);
     println( servicesAndCharas.size() );
     for( String service : servicesAndCharas.keySet())
     {
       print( service + " has " );
       println( servicesAndCharas.get(service));
-    }
-    Blepdroid.getInstance().connectToService(RFDUINO_UUID_SERVICE); 
-    Blepdroid.getInstance().setCharacteristicToListen(RFDUINO_UUID_RECEIVE);
+    } 
+    Blepdroid.getInstance().setCharacteristicToListen(bdDevice, RFDUINO_UUID_RECEIVE);
     
    allSetUp = true;
 }
@@ -71,7 +73,7 @@ void onBluetoothConnection( String device, int state)
   println(" onBluetoothConnection " + device + " " + state);
   if(state == 2)
   {
-    Blepdroid.getInstance().discoverServices();
+    Blepdroid.getInstance().discoverServices(bdDevice);
   }
 }
 
