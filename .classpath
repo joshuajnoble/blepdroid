@@ -2,7 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.launching.macosx.MacOSXType/Java SE 7 [1.7.0_75]"/>
-	<classpathentry kind="lib" path="/Users/jnoble/android/android-sdk-macosx/platforms/android-20/android.jar"/>
-	<classpathentry kind="lib" path="/Users/jnoble/code/Processing/modes/AndroidMode/android-core.zip"/>
+	<classpathentry kind="lib" path="/Users/jnoble/android/android-sdk-macosx/platforms/android-23/android.jar"/>
+	<classpathentry kind="lib" path="/Users/jnoble/Documents/workspace/blepHello/libs/android-core.jar"/>
+	<classpathentry kind="lib" path="libs/droidparts-2.9.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

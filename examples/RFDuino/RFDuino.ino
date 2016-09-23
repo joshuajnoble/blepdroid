@@ -4,7 +4,7 @@
 void setup() {
   Serial.begin(9600);
   Serial.println("Waiting for connection...");
-  RFduinoBLE.deviceName = "felix1";
+  RFduinoBLE.deviceName = "test";
   RFduinoBLE.advertisementData = "service";
   RFduinoBLE.begin();
 }
