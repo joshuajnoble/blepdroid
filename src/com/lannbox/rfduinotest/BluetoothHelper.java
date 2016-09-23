@@ -15,12 +15,12 @@ public class BluetoothHelper {
     }
 
     public static String getDeviceInfoText(BluetoothDevice device, int rssi, byte[] scanRecord) {
-        return new StringBuilder()
-                .append("Name: ").append(device.getName())
-                .append("\nMAC: ").append(device.getAddress())
-                .append("\nRSSI: ").append(rssi)
-                .append("\nScan Record:").append(parseScanRecord(scanRecord))
-                .toString();
+    	StringBuilder sb = new StringBuilder();
+        sb.append("Name: ").append(device.getName());
+        sb.append("\nMAC: ").append(device.getAddress());
+        sb.append("\nRSSI: ").append(rssi);
+        sb.append("\nScan Record:").append(parseScanRecord(scanRecord));
+        return sb.toString();
     }
 
     // Bluetooth Spec V4.0 - Vol 3, Part C, section 8
@@ -36,8 +36,7 @@ public class BluetoothHelper {
                     output.append("\n  Tx Power: ").append(scanRecord[i+1]);
                     break;
                 case 0xFF: // Manufacturer Specific data (RFduinoBLE.advertisementData)
-                    output.append("\n  Advertisement Data: ")
-                            .append(HexAsciiHelper.bytesToHex(scanRecord, i + 3, len));
+                    output.append("\n  Advertisement Data: ").append(HexAsciiHelper.bytesToHex(scanRecord, i + 3, len));
 
                     String ascii = HexAsciiHelper.bytesToAsciiMaybe(scanRecord, i + 3, len);
                     if (ascii != null) {
