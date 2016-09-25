@@ -34,12 +34,11 @@ public class BlepdroidAdapter {
 		
 		parent = _parent;
 		
+		final BluetoothManager bluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
+		mBluetoothAdapter = bluetoothManager.getAdapter();
+		
 		if(sdkVersion < 22)
 		{
-		
-			final BluetoothManager bluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
-			mBluetoothAdapter = bluetoothManager.getAdapter();
-	
 			// Checks if Bluetooth is supported on the device.
 			if (mBluetoothAdapter == null) {
 				Toast.makeText(parent.getActivity(),"BLE Not Supported", Toast.LENGTH_SHORT).show();
