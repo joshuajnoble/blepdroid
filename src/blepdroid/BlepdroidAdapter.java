@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import processing.core.PApplet;
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -12,7 +13,11 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
+import android.support.v4.content.ContextCompat;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.widget.Toast;
@@ -25,7 +30,6 @@ public class BlepdroidAdapter {
     private List<ScanFilter> filters;
 	
 	PApplet parent;
-
 	int sdkVersion;
 	
 	BlepdroidAdapter(PApplet _parent)
@@ -39,6 +43,7 @@ public class BlepdroidAdapter {
 		
 		if(sdkVersion < 22)
 		{
+			
 			// Checks if Bluetooth is supported on the device.
 			if (mBluetoothAdapter == null) {
 				Toast.makeText(parent.getActivity(),"BLE Not Supported", Toast.LENGTH_SHORT).show();
@@ -51,6 +56,7 @@ public class BlepdroidAdapter {
 			mLEScanner = mBluetoothAdapter.getBluetoothLeScanner();
             settings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
             filters = new ArrayList<ScanFilter>();
+            
 		}
 	}
 	

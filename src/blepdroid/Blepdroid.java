@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import processing.core.PApplet;
+import android.Manifest;
 import android.app.Fragment;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -27,9 +28,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
+import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
 
 import com.lannbox.rfduinotest.BluetoothHelper;
@@ -101,6 +106,8 @@ public class Blepdroid extends Fragment {
 
 	public String hwAddressToConnect;
 	public BlepGattCallback gattCallback;
+	
+	boolean hasScanPermission;
 
 	HashMap<String, BluetoothGatt> discoveredGatts;
 
@@ -137,6 +144,25 @@ public class Blepdroid extends Fragment {
 
 		super.onCreate(savedInstanceState);
 	}
+	
+	@Override
+	public void onStart() {
+		if(Build.VERSION.SDK_INT > 22)
+		{
+			if (ContextCompat.checkSelfPermission(parent.getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+				// No explanation needed, we can request the permission.
+				hasScanPermission = false;
+				ActivityCompat.requestPermissions(getActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+			} 
+			else
+			{
+				hasScanPermission = true;
+			}
+		} else {
+			hasScanPermission = true;
+		}
+		super.onStart();   
+	};
 
 	@Override
 	public void onResume() {
@@ -171,7 +197,6 @@ public class Blepdroid extends Fragment {
 			
 			Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
 			parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
-			
 		}
 	}
 
@@ -223,6 +248,21 @@ public class Blepdroid extends Fragment {
 		}
 	};
 
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+	    switch (requestCode) {
+	        case 1: {
+	            // If request is cancelled, the result arrays are empty.
+	            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+	            	hasScanPermission = true;
+	            } else {
+	            	hasScanPermission = false;
+	            }
+	            return;
+	        }
+	    }
+	}
+	
 	private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -304,6 +344,12 @@ public class Blepdroid extends Fragment {
 
 	public void scanDevices() {
 
+		if(!hasScanPermission)
+		{
+			PApplet.println(" don't have permission to scan for devices ");
+			return;
+		}
+		
 		PApplet.println(" scanDevices ");
 
 		discoveredDevices.clear();
@@ -514,10 +560,9 @@ public class Blepdroid extends Fragment {
 
 	}
 
-	public void addDevice(final BluetoothDevice device, int rssi,
-			byte[] scanRecord) {
+	public void addDevice(final BluetoothDevice device, int rssi, byte[] scanRecord) {
 
-		PApplet.println("addDevice ");
+		PApplet.println("addDevice " + device.getAddress());
 
 		// UUID uuid = new UUID(0,0);
 		// if(device.getUuids() != null && device.getUuids().length > 0)
