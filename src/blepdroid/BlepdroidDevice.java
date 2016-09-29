@@ -1,11 +1,8 @@
 package blepdroid;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-
 import android.bluetooth.BluetoothProfile;
-import android.os.ParcelUuid;
 
 // simple data object representing a hardware device
 public class BlepdroidDevice 

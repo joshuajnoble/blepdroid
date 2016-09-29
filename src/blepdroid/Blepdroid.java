@@ -20,7 +20,6 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -33,7 +32,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
 import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
 
@@ -58,11 +56,6 @@ public class Blepdroid extends Fragment {
 
 	BluetoothDevice chosenBluetoothDevice;
 
-	private final static String TAG = Blepdroid.class.getSimpleName();
-
-	// private String mDeviceName;
-	// private String mDeviceAddress;
-
 	String unknownServiceString; // getResources().getString(R.string.unknown_service);
 	String unknownCharaString; // getResources().getString(R.string.unknown_characteristic);
 
@@ -76,8 +69,8 @@ public class Blepdroid extends Fragment {
 //	private BluetoothAdapter mBluetoothAdapter;
 	private Handler mHandler;
 
-	public static HashMap<String, String> gattAttributes;
-	public static HashMap<String, UUID> characteristicUUIDs;
+	public HashMap<String, String> gattAttributes;
+	public HashMap<String, UUID> characteristicUUIDs;
 
 	private HashMap<String, BlepdroidDevice> discoveredDevices;
 	BlepdroidAdapter blepdroidAdapter;
@@ -125,13 +118,12 @@ public class Blepdroid extends Fragment {
 	public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
 
 	private PApplet parent;
-
-	// public static void initialize(Context parent)
-	public static void initialize(PApplet _parent) {
-		_parent.getFragmentManager().beginTransaction()
-				.add(android.R.id.content, new Blepdroid(_parent)).commit();
-
-	}
+//
+//	// public static void initialize(Context parent)
+//	public static void initialize(PApplet _parent) {
+//		_parent.getFragmentManager().beginTransaction().add(android.R.id.content, new Blepdroid(_parent)).commit();
+//
+//	}
 
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// required
@@ -143,6 +135,15 @@ public class Blepdroid extends Fragment {
 		PApplet.println(" BlepDroid on create ");
 
 		super.onCreate(savedInstanceState);
+		
+		blepdroidAdapter = new BlepdroidAdapter(parent, this);
+		
+        Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
+        parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+		
+        parent.getActivity().startService(gattServiceIntent);
+        
+        PApplet.println( "service started ??? ");
 	}
 	
 	@Override
@@ -171,32 +172,12 @@ public class Blepdroid extends Fragment {
 
 		super.onResume();
 		if (parent != null) {
-			parent.getActivity().registerReceiver(mGattUpdateReceiver,
-					makeGattUpdateIntentFilter());
+			parent.getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
 
 			// won't need this once we're done, hopefully
 			if (onDeviceDiscoveredMethod == null) {
 				findParentIntention();
 			}
-
-//			if (mBluetoothLeService != null) {
-//				scanDevices();
-//			} else {
-//
-//				PApplet.println(" mBluetoothLeService is null have to create mServiceConnection ");
-//
-//				Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
-//				parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
-//
-//				PApplet.println(" ServiceConnection initialized?? ");
-//
-//				scanDevices();
-//			}
-			
-			blepdroidAdapter = new BlepdroidAdapter(parent);
-			
-			Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
-			parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
 		}
 	}
 
@@ -227,16 +208,13 @@ public class Blepdroid extends Fragment {
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
 		@Override
-		public void onServiceConnected(ComponentName componentName,
-				IBinder service) {
+		public void onServiceConnected(ComponentName componentName, IBinder service) {
 
 			PApplet.println(" ServiceConnection onServiceConnected ");
-			mBluetoothLeService = ((BluetoothLeService.LocalBinder) service)
-					.getService();
+			mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
 
 			if (!mBluetoothLeService.initialize(parent)) {
-				PApplet.println(TAG
-						+ " ServiceConnection Unable to initialize Bluetooth ");
+				PApplet.println(" ServiceConnection Unable to initialize Bluetooth ");
 			} else {
 				PApplet.println(" ServiceConnection able to initialize Bluetooth ");
 			}
@@ -285,19 +263,16 @@ public class Blepdroid extends Fragment {
 		}
 	};
 
-	protected Blepdroid(PApplet _parent) {
+	public Blepdroid(PApplet _parent) {
 
 		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
-
-		if (blepdroidSingleton != null)
-			return;
 
 		parent = _parent;
 		discoveredDevices = new HashMap<String, BlepdroidDevice>();
 		findParentIntention();
-		gattCallback = new BlepGattCallback();
-
-		blepdroidSingleton = this;
+		BlepGattCallback.getInstance().setBlepdroidInstance(this);
+		
+		parent.getFragmentManager().beginTransaction().add(android.R.id.content, this).commit();
 
 	}
 
@@ -305,9 +280,9 @@ public class Blepdroid extends Fragment {
 	// begin public API
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	public static Blepdroid getInstance() {
-		return blepdroidSingleton;
-	}
+//	public static Blepdroid getInstance() {
+//		return blepdroidSingleton;
+//	}
 
 	public BluetoothAdapter getBluetoothAdapater() {
 		return BluetoothAdapter.getDefaultAdapter();
@@ -361,7 +336,7 @@ public class Blepdroid extends Fragment {
 		PApplet.println(" check functionality ");
 
 		if (!parent.getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-			Toast.makeText(Blepdroid.getInstance().parent.getActivity(), "BLE Not Supported", Toast.LENGTH_SHORT).show();
+			Toast.makeText(parent.getActivity(), "BLE Not Supported", Toast.LENGTH_SHORT).show();
 			PApplet.println(" BLE Not Supported ");
 			parent.exit();
 		}
@@ -562,14 +537,6 @@ public class Blepdroid extends Fragment {
 
 	public void addDevice(final BluetoothDevice device, int rssi, byte[] scanRecord) {
 
-		PApplet.println("addDevice " + device.getAddress());
-
-		// UUID uuid = new UUID(0,0);
-		// if(device.getUuids() != null && device.getUuids().length > 0)
-		// {
-		// uuid = device.getUuids()[0].getUuid();
-		// }
-
 		if (!discoveredDevices.containsKey(device.getAddress())) {
 			// BlepdroidDevice( String name, String address, UUID[]
 			// serviceUUIDs, int rssi, byte[] record )
@@ -579,7 +546,7 @@ public class Blepdroid extends Fragment {
 
 			try {
 				PApplet.println("device discovered ");
-				Blepdroid.getInstance().onDeviceDiscoveredMethod.invoke( Blepdroid.getInstance().parent, discoveredDevices.get(device.getAddress()));
+				onDeviceDiscoveredMethod.invoke( parent, discoveredDevices.get(device.getAddress()));
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			} catch (IllegalAccessException e) {
@@ -625,6 +592,18 @@ public class Blepdroid extends Fragment {
 			blepdroidAdapter.stopScan();
 		}
 	}
+	
+	// TODO this:
+	
+	public void beginAdvertisingWithName(String advertisementName)
+	{
+		
+	}
+	
+	public void acceptConnection(BlepdroidDevice device)
+	{
+		
+	}
 
 	// //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// callbacks to manage the records of the discovered devices //
@@ -662,13 +641,13 @@ public class Blepdroid extends Fragment {
 		}
 
 		PApplet.println(" getting ready to onServicesDiscoveredMethod invoke ");
-		PApplet.println(Blepdroid.getInstance().onServicesDiscoveredMethod);
+		PApplet.println(onServicesDiscoveredMethod);
 
 		try {
 
 			PApplet.println(" onServicesDiscoveredMethod invoke ");
-			Blepdroid.getInstance().onServicesDiscoveredMethod.invoke(
-					Blepdroid.getInstance().parent,
+			onServicesDiscoveredMethod.invoke(
+					parent,
 					discoveredDevices.get(gatt.getDevice().getAddress()),
 					status);
 
@@ -700,7 +679,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onBluetoothRSSIMethod.invoke(Blepdroid.getInstance().parent,discoveredDevices.get(gatt.getDevice().getAddress()), rssi);
+			onBluetoothRSSIMethod.invoke(parent,discoveredDevices.get(gatt.getDevice().getAddress()), rssi);
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -727,7 +706,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onDescriptorWriteMethod.invoke(Blepdroid.getInstance().parent, discoveredDevices.get(gatt.getDevice().getAddress()), descriptor.getClass().getName(), "WRITE");
+			onDescriptorWriteMethod.invoke(parent, discoveredDevices.get(gatt.getDevice().getAddress()), descriptor.getClass().getName(), "WRITE");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -753,7 +732,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onDescriptorReadMethod.invoke( Blepdroid.getInstance().parent, discoveredDevices.get(gatt.getDevice().getAddress()), descriptor.getValue(), "READ");
+			onDescriptorReadMethod.invoke( parent, discoveredDevices.get(gatt.getDevice().getAddress()), descriptor.getValue(), "READ");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -764,8 +743,7 @@ public class Blepdroid extends Fragment {
 
 	}
 
-	public void connectionStateChangeCallback(BluetoothGatt gatt, int status,
-			int newState) {
+	public void connectionStateChangeCallback(BluetoothGatt gatt, int status, int newState) {
 
 		PApplet.println(" connectionStateChangeCallback ");
 
@@ -783,7 +761,7 @@ public class Blepdroid extends Fragment {
 
 		try {
 			PApplet.println(" onBluetoothConnectionMethod invoke ");
-			Blepdroid.getInstance().onBluetoothConnectionMethod.invoke( Blepdroid.getInstance().parent, discoveredDevices.get(gatt.getDevice().getAddress()), newState);
+			onBluetoothConnectionMethod.invoke( parent, discoveredDevices.get(gatt.getDevice().getAddress()), newState);
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -809,7 +787,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onCharacteristicWriteMethod.invoke(Blepdroid.getInstance().parent,discoveredDevices.get(gatt.getDevice().getAddress()),characteristic.getClass().getName(),characteristic.getValue());
+			onCharacteristicWriteMethod.invoke(parent,discoveredDevices.get(gatt.getDevice().getAddress()),characteristic.getClass().getName(),characteristic.getValue());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -836,7 +814,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onCharacteristicReadMethod.invoke( Blepdroid.getInstance().parent,discoveredDevices.get(gatt.getDevice().getAddress()), characteristic.getUuid().toString(), characteristic.getValue());
+			onCharacteristicReadMethod.invoke( parent,discoveredDevices.get(gatt.getDevice().getAddress()), characteristic.getUuid().toString(), characteristic.getValue());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -862,7 +840,7 @@ public class Blepdroid extends Fragment {
 		}
 
 		try {
-			Blepdroid.getInstance().onCharacteristicChangedMethod.invoke(Blepdroid.getInstance().parent,discoveredDevices.get(gatt.getDevice().getAddress()),characteristic.getUuid().toString(),characteristic.getValue());
+			onCharacteristicChangedMethod.invoke(parent,discoveredDevices.get(gatt.getDevice().getAddress()),characteristic.getUuid().toString(),characteristic.getValue());
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {

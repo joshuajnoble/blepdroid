@@ -59,27 +59,25 @@ public class BluetoothLeService extends Service {
 
 	public class LocalBinder extends Binder {
 		BluetoothLeService getService() {
+			PApplet.println(TAG + " getService ");
 			return BluetoothLeService.this;
 		}
 	}
 
+
+	private final IBinder mBinder = new LocalBinder();
+	
 	@Override
 	public IBinder onBind(Intent intent) {
+		PApplet.println(TAG + " onBind ");
 		return mBinder;
 	}
 
 	@Override
 	public boolean onUnbind(Intent intent) {
-		// After using a given device, you should make sure that
-		// BluetoothGatt.close() is called
-		// such that resources are cleaned up properly. In this particular
-		// example, close() is
-		// invoked when the UI is disconnected from the Service.
 		closeAll();
 		return super.onUnbind(intent);
 	}
-
-	private final IBinder mBinder = new LocalBinder();
 
 	/**
 	 * Initializes a reference to the local Bluetooth adapter.
@@ -91,6 +89,7 @@ public class BluetoothLeService extends Service {
 		// through BluetoothManager.
 
 		PApplet.println(" Initializing BluetoothManager.");
+
 
 		if (mBluetoothManager == null) {
 			mBluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
@@ -184,16 +183,17 @@ public class BluetoothLeService extends Service {
 
 		// it's not an existing device?
 		final BluetoothDevice bleDevice = mBluetoothAdapter.getRemoteDevice(device.address);
-		
+
 		if (bleDevice == null) {
 			PApplet.println(TAG + "Device not found.  Unable to connect.");
 			return false;
 		}
 
 		PApplet.println(" BluetoothLeService::connect connectGatt ");
-		
-		BluetoothGatt gatt = bleDevice.connectGatt(this, false, Blepdroid.getInstance().gattCallback);
+
+		BluetoothGatt gatt = bleDevice.connectGatt(this, false, BlepGattCallback.getInstance());
 		mGatts.put(device.address, gatt);
+		PApplet.println(" mGatts.put(device.address, gatt); ");
 
 		return true;
 	}
@@ -357,36 +357,7 @@ public class BluetoothLeService extends Service {
 
 	}
 
-	public void setCharacteristicNotification(BlepdroidDevice device, UUID uuid,
-			UUID clientConfig, boolean enabled) {
-		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-		// PApplet.println(TAG + "BluetoothAdapter not initialized");
-		// return;
-		// }
-		//
-		// if(mBluetoothGattService == null) {
-		// PApplet.println("WTF no mBluetoothGattService");
-		// return;
-		// }
-		// BluetoothGattCharacteristic receiveCharacteristic =
-		// mBluetoothGattService.getCharacteristic(uuid);
-		// if (receiveCharacteristic != null) {
-		// BluetoothGattDescriptor receiveConfigDescriptor =
-		// receiveCharacteristic.getDescriptor(clientConfig);
-		// if (receiveConfigDescriptor != null) {
-		// mBluetoothGatt.setCharacteristicNotification(receiveCharacteristic,
-		// true);
-		//
-		// receiveConfigDescriptor.setValue(
-		// BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-		// mBluetoothGatt.writeDescriptor(receiveConfigDescriptor);
-		// } else {
-		// PApplet.println( "RFduino receive config descriptor not found!");
-		// }
-		//
-		// } else {
-		// PApplet.println( "RFduino receive characteristic not found!");
-		// }
+	public void setCharacteristicNotification(BlepdroidDevice device, UUID uuid, UUID clientConfig, boolean enabled) {
 
 		for (String s : mGatts.keySet()) {
 			if (s.equals(device.address)) {

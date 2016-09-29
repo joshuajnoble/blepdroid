@@ -8,52 +8,71 @@ import android.bluetooth.BluetoothGattDescriptor;
 
 public class BlepGattCallback extends BluetoothGattCallback {
 	
+	private Blepdroid blepdroid;
+	
+	private static BlepGattCallback _instance;
+	public static BlepGattCallback getInstance()
+	{
+		if(_instance == null)
+		{
+			_instance = new BlepGattCallback();
+		}
+		
+		return _instance;
+	}
+	
+	public void setBlepdroidInstance(Blepdroid _blepdroid)
+	{
+		blepdroid = _blepdroid;
+	}
+	
+	
 	@Override
 	public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
 	{
-		Blepdroid.getInstance().characteristicChangedCallback(gatt, characteristic);
+		blepdroid.characteristicChangedCallback(gatt, characteristic);
 	}
 	
 	@Override
 	public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
 	{
 		
-		Blepdroid.getInstance().characteristicReadCallback(gatt, characteristic, status);
+		blepdroid.characteristicReadCallback(gatt, characteristic, status);
 	}
 	
 	@Override
 	public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status)
 	{
 		
-		Blepdroid.getInstance().characteristicWriteCallback(gatt, characteristic, status);
+		blepdroid.characteristicWriteCallback(gatt, characteristic, status);
 	}
 	
 	@Override
 	public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState)
 	{
-		Blepdroid.getInstance().connectionStateChangeCallback(gatt, status, newState);
+		blepdroid.connectionStateChangeCallback(gatt, status, newState);
 	}
 	
 	@Override
 	public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
 	{
 		
-		Blepdroid.getInstance().descriptorReadCallback( gatt, descriptor, status );
+		blepdroid.descriptorReadCallback( gatt, descriptor, status );
 	}
 	
 	@Override
 	public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status)
 	{
 
-		Blepdroid.getInstance().descriptorWriteCallback(gatt, descriptor, status);
+		blepdroid.descriptorWriteCallback(gatt, descriptor, status);
 		
 	}
 	
 	@Override
 	public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status)
 	{
-		//Blepdroid.getInstance().onBluetoothRSSIMethod.invoke( Blepdroid.getInstance().parent, gatt.getClass().getName(), rssi );
-		Blepdroid.getInstance().rssiCallback(gatt, rssi, status);
+		//blepdroid.onBluetoothRSSIMethod.invoke( blepdroid.parent, gatt.getClass().getName(), rssi );
+		blepdroid.rssiCallback(gatt, rssi, status);
 	}
 	
 	@Override
@@ -69,7 +88,7 @@ public class BlepGattCallback extends BluetoothGattCallback {
 		
 		if(status == BluetoothGatt.GATT_SUCCESS)
 		{
-			Blepdroid.getInstance().servicesDiscoveredCallback(gatt, status);
+			blepdroid.servicesDiscoveredCallback(gatt, status);
 		}
 		else
 		{

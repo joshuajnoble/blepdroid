@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import processing.core.PApplet;
-import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -13,11 +12,7 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.ActivityCompat.OnRequestPermissionsResultCallback;
-import android.support.v4.content.ContextCompat;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
 import android.widget.Toast;
@@ -30,13 +25,15 @@ public class BlepdroidAdapter {
     private List<ScanFilter> filters;
 	
 	PApplet parent;
+	Blepdroid blepdroid;
 	int sdkVersion;
 	
-	BlepdroidAdapter(PApplet _parent)
+	BlepdroidAdapter(PApplet _parent, Blepdroid _blepdroid)
 	{
 		sdkVersion = Build.VERSION.SDK_INT;
 		
 		parent = _parent;
+		blepdroid = _blepdroid;
 		
 		final BluetoothManager bluetoothManager = (BluetoothManager) parent.getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
 		mBluetoothAdapter = bluetoothManager.getAdapter();
@@ -95,14 +92,22 @@ public class BlepdroidAdapter {
         public void onScanResult(int callbackType, ScanResult result) {
             //BluetoothDevice btDevice = result.getDevice();
             //connectToDevice(btDevice);
-        	Blepdroid.getInstance().addDevice(result.getDevice(), result.getRssi(), result.getScanRecord().getBytes());
+        	if(result.getScanRecord() != null)
+        	{
+        		blepdroid.addDevice(result.getDevice(), result.getRssi(), result.getScanRecord().getBytes());
+        	}
+        	else
+        	{
+        		byte empty[] = new byte[1];
+        		blepdroid.addDevice(result.getDevice(), result.getRssi(), empty);
+        	}
         }
 
         @Override
         public void onBatchScanResults(List<ScanResult> results) {
             for (ScanResult sr : results) {
 //                Log.i("ScanResult - Results", sr.toString());
-            	Blepdroid.getInstance().addDevice(sr.getDevice(), sr.getRssi(), sr.getScanRecord().getBytes());
+            	blepdroid.addDevice(sr.getDevice(), sr.getRssi(), sr.getScanRecord().getBytes());
             }
         }
 
@@ -122,7 +127,7 @@ public class BlepdroidAdapter {
 			parent.getActivity().runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					Blepdroid.getInstance().addDevice(device, rssi, scanRecord);
+					blepdroid.addDevice(device, rssi, scanRecord);
 				}
 			});
 		}
