@@ -54,6 +54,13 @@ import com.lannbox.rfduinotest.BluetoothHelper;
 
 public class Blepdroid extends Fragment {
 
+	enum BLE_MODE {
+		CLIENT, PERIPHERAL
+	};
+	
+	
+	private BLE_MODE mode;
+	
 	BluetoothDevice chosenBluetoothDevice;
 
 	String unknownServiceString; // getResources().getString(R.string.unknown_service);
@@ -116,6 +123,8 @@ public class Blepdroid extends Fragment {
 	public final static String ACTION_GATT_SERVICES_DISCOVERED = "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
 	public final static String ACTION_DATA_AVAILABLE = "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
 	public final static String EXTRA_DATA = "com.example.bluetooth.le.EXTRA_DATA";
+	
+	BlepPeripheral blepPeripheral;
 
 	private PApplet parent;
 //
@@ -138,10 +147,18 @@ public class Blepdroid extends Fragment {
 		
 		blepdroidAdapter = new BlepdroidAdapter(parent, this);
 		
-        Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
-        parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+		if(mode == BLE_MODE.CLIENT)
+		{
 		
-        parent.getActivity().startService(gattServiceIntent);
+	        Intent gattServiceIntent = new Intent(parent.getActivity(), BluetoothLeService.class);
+	        parent.getActivity().bindService(gattServiceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+	        parent.getActivity().startService(gattServiceIntent);
+		}
+		else
+		{
+			blepPeripheral = new BlepPeripheral();
+			blepPeripheral.init(parent, this);
+		}
         
         PApplet.println( "service started ??? ");
 	}
@@ -274,15 +291,37 @@ public class Blepdroid extends Fragment {
 		
 		parent.getFragmentManager().beginTransaction().add(android.R.id.content, this).commit();
 
+		mode = BLE_MODE.CLIENT;
 	}
+	
+	public Blepdroid(PApplet _parent, boolean isPeripheral) {
+
+		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
+
+		parent = _parent;
+		discoveredDevices = new HashMap<String, BlepdroidDevice>();
+		findParentIntention();
+		
+		if(isPeripheral)
+		{
+			mode = BLE_MODE.PERIPHERAL;
+		}
+		else
+		{
+			mode = BLE_MODE.CLIENT;
+		}
+		
+		BlepGattCallback.getInstance().setBlepdroidInstance(this);
+		
+		parent.getFragmentManager().beginTransaction().add(android.R.id.content, this).commit();
+
+	}
+
 
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// begin public API
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//	public static Blepdroid getInstance() {
-//		return blepdroidSingleton;
-//	}
 
 	public BluetoothAdapter getBluetoothAdapater() {
 		return BluetoothAdapter.getDefaultAdapter();
@@ -424,11 +463,46 @@ public class Blepdroid extends Fragment {
 		}
 		return allCharasForService;
 	}
+	
+	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// peripheral
+	
+	public void setDeviceName( String name )
+	{
+		
+	}
+	
+	public void addService( String name )
+	{
+		
+	}
+	
+	public void addCharacteristic( String characteristicName, String serviceName, byte[] value )
+	{
+		
+	}
+
+	
 
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// end public API
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	
+	// peripheral
+	public void onPeripheralWrite( byte[] data )
+	{
+		
+	}
+	
+	// peripheral
+	public void onPeripheralRead( byte[] data )
+	{
+		
+	}
+	
+	
+	
 	public void servicesDiscovered(BluetoothGatt gatt, int status) {
 		discoveredGatts.put(Integer.toString(gatt.hashCode()), gatt);
 	}
