@@ -309,7 +309,7 @@ public class Blepdroid extends Fragment {
 		if (mBluetoothLeService != null) {
 			PApplet.println(" connectDevice::connected device ");
 			// return
-			// mBluetoothLeService.connect(Blepdroid.getInstance().hwAddressToConnect);
+			// mBluetoothLeService.connect(blepdroid.hwAddressToConnect);
 			return mBluetoothLeService.connect(device);
 		} else {
 			PApplet.println(" connectDevice::can't connect device ");

@@ -15,13 +15,14 @@ public static UUID RFDUINO_UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBi
 boolean allSetUp = false;
 
 BlepdroidDevice bdDevice;
+Blepdroid blepdroid;
 
 PVector accelerator;
 
 void setup() {
   size(600, 800, P3D);
   
-  Blepdroid.initialize(  this);
+  blepdroid = new Blepdroid(  this);
   
   accelerator = new PVector();
   accelerator.x = width/2;
@@ -48,7 +49,7 @@ void onDeviceDiscovered(BlepdroidDevice device)
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
   if (device.name.equals("Distinct Name"))
   {
-    if(Blepdroid.getInstance().connectDevice(device))
+    if(blepdroid.connectDevice(device))
     {
       bdDevice = device; // store for later
     }
@@ -60,14 +61,14 @@ void onServicesDiscovered(ArrayList<UUID> ids, int status)
   println(" onServicesDiscovered " + ids );
   println(" 0 means ok, anything else means bad " + status);
 
-  HashMap<String, ArrayList<String>> servicesAndCharas = Blepdroid.getInstance().findAllServicesCharacteristics(bdDevice);
+  HashMap<String, ArrayList<String>> servicesAndCharas = blepdroid.findAllServicesCharacteristics(bdDevice);
   println( servicesAndCharas.size() );
   for ( String service : servicesAndCharas.keySet ())
   {
     print( service + " has " );
     println( servicesAndCharas.get(service));
   } 
-  Blepdroid.getInstance().setCharacteristicToListen(bdDevice, RFDUINO_UUID_RECEIVE);
+  blepdroid.setCharacteristicToListen(bdDevice, RFDUINO_UUID_RECEIVE);
 
   allSetUp = true;
 }
@@ -82,7 +83,7 @@ void onBluetoothConnection( String device, int state)
   println(" onBluetoothConnection " + device + " " + state);
   if (state == 2)
   {
-    Blepdroid.getInstance().discoverServices(bdDevice);
+    blepdroid.discoverServices(bdDevice);
   }
 }
 

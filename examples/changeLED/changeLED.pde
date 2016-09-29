@@ -12,13 +12,15 @@ public static UUID RFDUINO_UUID_DISCONNECT = BluetoothHelper.sixteenBitUuid(0x22
 public static UUID RFDUINO_UUID_CLIENT_CONFIGURATION = BluetoothHelper.sixteenBitUuid(0x2902);
 
 BlepdroidDevice bdDevice;
+Blepdroid blepdroid;
+
 boolean allSetUp = false;
 byte[] rgb = {0, 0, 0};
 
 void setup() {
   size(400,400);
   smooth();
-  Blepdroid.initialize(this);
+  blepdroid = new Blepdroid(this);
 }
 
 void draw() {
@@ -34,21 +36,21 @@ public boolean surfaceTouchEvent(MotionEvent me) {
   {
     int y = (int) me.getY(0);
     rgb[0] = (byte) y;
-    Blepdroid.getInstance().writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
+    blepdroid.writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
   }
   
   if(numPointers > 1)
   {
     int y = (int) me.getY(1);
     rgb[1] = (byte) y;
-    Blepdroid.getInstance().writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
+    blepdroid.writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
   }
   
   if(numPointers > 2)
   {
     int y = (int) me.getY(2);
     rgb[2] = (byte) y;
-    Blepdroid.getInstance().writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
+    blepdroid.writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, rgb);
   }
   
   // If you want the variables for motionX/motionY, mouseX/mouseY etc.
@@ -59,7 +61,7 @@ public boolean surfaceTouchEvent(MotionEvent me) {
 void mousePressed()
 { 
   String hi = new String("ffffff");
-  Blepdroid.getInstance().writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, hi.getBytes());
+  blepdroid.writeCharacteristic(bdDevice, RFDUINO_UUID_SEND, hi.getBytes());
 }
 
 void onDeviceDiscovered(BlepdroidDevice device)
@@ -67,7 +69,7 @@ void onDeviceDiscovered(BlepdroidDevice device)
   println("discovered device " + device.name + " address: " + device.address + " rssi: " + device.rssi );
   if(device.name.equals("my device")) // here's where you want to put your own device name  
   {
-    if(Blepdroid.getInstance().connectDevice(device))
+    if(blepdroid.connectDevice(device))
     {
       bdDevice = device; // now store it for later use
     }
@@ -79,14 +81,14 @@ void onServicesDiscovered(ArrayList<UUID> ids, int status)
   println(" onServicesDiscovered " + ids );
   println(" 0 means ok, anything else means bad " + status);
   
-  HashMap<String, ArrayList<String>> servicesAndCharas = Blepdroid.getInstance().findAllServicesCharacteristics(bdDevice);
+  HashMap<String, ArrayList<String>> servicesAndCharas = blepdroid.findAllServicesCharacteristics(bdDevice);
     println( servicesAndCharas.size() );
     for( String service : servicesAndCharas.keySet())
     {
       print( service + " has " );
       println( servicesAndCharas.get(service));
     }
-    Blepdroid.getInstance().setCharacteristicToListen(bdDevice, RFDUINO_UUID_RECEIVE);
+    blepdroid.setCharacteristicToListen(bdDevice, RFDUINO_UUID_RECEIVE);
     
    allSetUp = true;
 }
@@ -101,7 +103,7 @@ void onBluetoothConnection( String device, int state)
   println(" onBluetoothConnection " + device + " " + state);
   if(state == 2)
   {
-    Blepdroid.getInstance().discoverServices(bdDevice);
+    blepdroid.discoverServices(bdDevice);
   }
 }
 
