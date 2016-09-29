@@ -7,6 +7,33 @@ Right now optimized for RFDuino but potentially possible for any BLE + GATT devi
 
 For instance, if you needed to connect to a BLE device that you knew basically nothing about, you'd power up your device, and in your Processing app scan for devices, connect to the device that you're interested in and scan for services and then scan for characteristics.
 
+## Using the library ##
+
+It's very important that your AndroidManifest.xml file be correct and you'll need to edit it outside of the Processing IDE because there's something that we need to add so that your manifest is created correctly. It should look like this:
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" android:versionName="1.0" package="">
+   <uses-sdk android:minSdkVersion="18" android:targetSdkVersion="23" />
+   <application android:debuggable="true" android:icon="@drawable/icon" android:label="">
+      <service android:name="blepdroid.BluetoothLeService" />
+      <activity android:name=".MainActivity">
+         <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+         </intent-filter>
+      </activity>
+   </application>
+   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+   <uses-permission android:name="android.permission.BLUETOOTH" />
+   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+</manifest>
+```
+
+The line that says `<service android:name="blepdroid.BluetoothLeService" />` is particularly important because that's what allows Blepdroid to create a service that can connect to your phones Bluetooth hardware.
+
 ##Glossary##
 
 Ok, first let's talk terminology.
