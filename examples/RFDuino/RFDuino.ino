@@ -24,7 +24,7 @@ void RFduinoBLE_onReceive(char *data, int len)
 
 void RFduinoBLE_onDisconnect()
 {
-  RFduinoBLE.stop();
+  RFduinoBLE.end();
   RFduinoBLE.begin();
 }
 

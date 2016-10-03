@@ -31,6 +31,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.ParcelUuid;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.widget.Toast;
@@ -465,7 +466,7 @@ public class Blepdroid extends Fragment {
 	}
 	
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// peripheral
+	// peripheral mode
 	
 	public void setDeviceName( String name )
 	{
@@ -489,13 +490,13 @@ public class Blepdroid extends Fragment {
 	// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	
-	// peripheral
+	// peripheral mode
 	public void onPeripheralWrite( byte[] data )
 	{
 		
 	}
 	
-	// peripheral
+	// peripheral mode
 	public void onPeripheralRead( byte[] data )
 	{
 		
@@ -504,6 +505,10 @@ public class Blepdroid extends Fragment {
 	
 	
 	public void servicesDiscovered(BluetoothGatt gatt, int status) {
+		if(discoveredGatts == null )
+		{
+			discoveredGatts = new HashMap<String, BluetoothGatt>();
+		}
 		discoveredGatts.put(Integer.toString(gatt.hashCode()), gatt);
 	}
 
@@ -706,12 +711,23 @@ public class Blepdroid extends Fragment {
 			discoveredDevices.put(gatt.getDevice().getAddress(), d);
 
 		} else {
-
+			
+			PApplet.println(gatt.getServices().size());
+			
 			for (int i = 0; i < gatt.getServices().size(); i++) {
 				discoveredDevices.get(gatt.getDevice().getAddress()).serviceIDs.add(gatt.getServices().get(i).getUuid());
+				PApplet.println(gatt.getServices().get(i).getUuid().toString());
 			}
 
-			PApplet.println(gatt.getDevice().getUuids());
+//			ParcelUuid[] puuid = gatt.getDevice().getUuids();
+//			
+//			StringBuilder sb = new StringBuilder();
+//			for( int i = 0; i < puuid.length; i++ ) {
+//				sb.append(puuid[i].toString());
+//			}
+//				
+//			
+//			PApplet.println(sb.toString());
 		}
 
 		PApplet.println(" getting ready to onServicesDiscoveredMethod invoke ");
