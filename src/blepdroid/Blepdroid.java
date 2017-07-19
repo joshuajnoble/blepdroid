@@ -40,17 +40,10 @@ import com.lannbox.rfduinotest.BluetoothHelper;
 
 /**
  * The Class Blepdroid manages the bluetooth connections and service on the
- * android device. This class has been tested and can manage multiple
+ * android device. This class has been tested with Android 4.4.3 and can manage multiple
  * simultaneous bluetooth connections. The maximum number of connections varied
  * by device limitations but 3 simultaneous connections were typical.
  * 
- * To receive data from bluetooth connections a sketch should define the
- * following method:<br />
- * 
- * void onBluetoothDataEvent(String who, byte[] data)<br />
- * 
- * who - the name of the device sending the data<br />
- * data - byte array of the data received<br />
  */
 
 public class Blepdroid extends Fragment {
