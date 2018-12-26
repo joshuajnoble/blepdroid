@@ -123,7 +123,9 @@ dependencies {
     }
 
     compileOnly name: "android"
-    compileOnly "com.android.support:support-v4:${supportLibsVersion}"
+    aar "com.android.support:support-v4:${supportLibsVersion}"
+    // implementation "com.android.support:appcompat-v7:${supportLibsVersion}"
+    // implementation "com.android.support:design:${supportLibsVersion}"
     compileOnly "org.p5android:processing-core:${modeVersion}"
 }
 
