@@ -9,7 +9,7 @@ android {
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
-            java.srcDirs = ['../../../mode/libraries/vr/src']
+            java.srcDirs = ['../../../src']
         }
     }
     compileOptions {
