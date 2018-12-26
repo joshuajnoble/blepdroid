@@ -1,0 +1,245 @@
+import java.nio.file.Files
+import org.zeroturnaround.zip.ZipUtil
+import org.apache.commons.io.FileUtils
+import java.util.regex.Pattern
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+
+import com.android.build.gradle.internal.dependency.ExtractAarTransform
+import com.android.build.gradle.internal.dependency.AarTransform
+import com.android.build.gradle.internal.publishing.AndroidArtifacts
+import com.android.build.gradle.internal.publishing.AndroidArtifacts.ArtifactType
+import com.google.common.collect.ImmutableList
+import org.gradle.api.artifacts.transform.ArtifactTransform
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import static org.gradle.api.internal.artifacts.ArtifactAttributes.ARTIFACT_FORMAT
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'java-library'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }    
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.0.1'
+        classpath group: 'commons-io', name: 'commons-io', version: '2.5'
+        classpath group: 'org.zeroturnaround', name: 'zt-zip', version: '1.9'        
+    }
+}
+
+allprojects {
+    // Versions of all dependencies
+    ext.targetSdkVersion = '26'
+    ext.supportLibsVersion = '26.0.2'
+    ext.modeVersion = '4.0.3'
+    
+    // Getting library properties
+    Properties libProperties = new Properties()
+    libProperties.load(project.rootProject.file("library.properties").newDataInputStream())
+    ext.libName = libProperties.getProperty("name")
+    ext.libPackage = libProperties.getProperty("package")
+    ext.libVersion = libProperties.getProperty("prettyVersion").split(' ')[0].trim()
+
+    def fn = project.rootProject.file("local.properties")
+    if (!fn.exists()) {
+        if (System.env["ANDROID_SDK"] != null) {
+            def syspath = System.env["ANDROID_SDK"]
+            def parts = syspath.split(Pattern.quote(File.separator))
+            def path = String.join("/", parts)
+            fn.withWriterAppend { w ->
+                w << "sdk.dir=${path}\n"
+            }
+        } else {
+            throw new GradleException(
+                "The file local.properties does not exist, and there is no ANDROID_SDK environmental variable defined in the system.\n" +
+                "Define ANDROID_SDK so it points to the location of the Android SDK, or create the local.properties file manually\n" +
+                "and add the following line to it:\n" +
+                "sdk.dir=<path to Android SDK>")
+        }
+    }
+
+    Properties localProperties = new Properties()
+    localProperties.load(project.rootProject.file("local.properties").newDataInputStream())
+    def sdkDir = localProperties.getProperty("sdk.dir")
+    ext.androidPlatformPath = "${sdkDir}/platforms/android-${targetSdkVersion}"
+    ext.androidToolsLibPath = "${sdkDir}/tools/lib"
+
+    repositories {
+        google()
+        jcenter()
+        flatDir dirs: androidPlatformPath
+        flatDir dirs: androidToolsLibPath
+    }
+
+    sourceCompatibility = 1.7
+    targetCompatibility = 1.7    
+}
+
+clean.doFirst {
+    delete "dist"
+}
+
+/**
+ * Custom aar configuration needed to use aar files as dependencies in a pure java 
+ * library project, lifted from the following repo:
+ * https://github.com/nekocode/Gradle-Import-Aar
+ */
+configurations {
+    aar {
+        attributes {
+            attribute(ARTIFACT_FORMAT, ArtifactTypeDefinition.JAR_TYPE)
+        }
+
+        // Add the aar inner jars to the compileClasspath
+        sourceSets.main.compileClasspath += it
+
+        // Put our custom dependencies onto IDEA's PROVIDED scope
+        apply plugin: "idea"
+        idea.module.scopes.PROVIDED.plus += [it]
+    }
+}
+
+dependencies {
+    // Transforamtions to extract the classes.jar in the aar package
+    def explodedAarType = ArtifactType.EXPLODED_AAR.getType()
+    registerTransform {
+        from.attribute(ARTIFACT_FORMAT, AndroidArtifacts.TYPE_AAR)
+        to.attribute(ARTIFACT_FORMAT, explodedAarType)
+        artifactTransform(ExtractAarTransform)
+    }
+
+    registerTransform {
+        from.attribute(ARTIFACT_FORMAT, explodedAarType)
+        to.attribute(ARTIFACT_FORMAT, "classes.jar")
+        artifactTransform(AarTransform) { params(ArtifactType.JAR) }
+    }
+
+    registerTransform {
+        from.attribute(ARTIFACT_FORMAT, "classes.jar")
+        to.attribute(ARTIFACT_FORMAT, ArtifactTypeDefinition.JAR_TYPE)
+        artifactTransform(ClassesJarArtifactTransform)
+    }
+
+    compileOnly name: "android"
+    compileOnly "com.android.support:support-v4:${supportLibsVersion}"
+    compileOnly "org.p5android:processing-core:${modeVersion}"
+}
+
+/**
+ * An ArtifactTransform for renaming the classes.jar
+ */
+class ClassesJarArtifactTransform extends ArtifactTransform {
+    @Override
+    List<File> transform(File file) {
+        final String[] names = file.getPath().split(Pattern.quote(File.separator))
+        final String aarName = names[names.length - 4].replace(".aar", "")
+        final File renamedJar = new File(getOutputDirectory(), aarName + ".jar")
+        renamedJar << file.bytes
+        File libraryFolder = new File(System.getProperty("user.dir"), "library")
+        libraryFolder.mkdirs();
+        final File libraryJar = new File(libraryFolder, aarName + ".jar")
+        Files.copy(renamedJar.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
+        return ImmutableList.of(renamedJar)
+    }
+}
+
+task createPom {
+    // The compile configuration should be replaced by implementation eventually:
+    // https://developer.android.com/studio/build/gradle-plugin-3-0-0-migration#new_configurations  
+    pom {
+       project {
+           groupId "${libPackage}"
+           artifactId "${libName}"
+           version "${libVersion}"
+           packaging "jar"
+           licenses {
+               license {
+                   name "GNU Lesser General Public License, version 2.1"
+                   url "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
+                   distribution "repo"
+               }
+           }
+           dependencies {
+               dependency {
+                   groupId "org.p5android"
+                   artifactId "processing-core"
+                   version "${modeVersion}"
+                   scope "compile"
+               }             
+           }
+        }
+    }.writeTo("dist/${libName}-${libVersion}.pom")
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src/"]
+        }
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = "sources"
+    from sourceSets.main.allSource
+}
+
+// Does not work because of Processing-specific tags in source code, such as @webref
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = "javadoc"
+    from javadoc.destinationDir
+}
+
+artifacts {
+//     archives javadocJar
+    archives sourcesJar
+}
+
+jar.doLast { task ->
+    ant.checksum file: task.archivePath
+}
+
+clean.doFirst {
+    delete "dist"
+    delete "library/${libName}.jar"
+}
+
+build.doLast {
+    // // Copying lib jar to library folder
+    File libJar = file("library/${libName}.jar")
+    libJar.mkdirs();
+    Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
+               libJar.toPath(), REPLACE_EXISTING);   
+
+    // // Copying the files for release on JCentral (optional)
+    File distFolder = file("dist");
+    distFolder.mkdirs();
+    Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
+               file("dist/${libName}-${libVersion}.jar").toPath(), REPLACE_EXISTING);
+    Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
+               file("dist/processing-${libName}-${libVersion}-sources.jar").toPath(), REPLACE_EXISTING);
+    Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
+               file("dist/${libName}-${libVersion}.jar.md5").toPath(), REPLACE_EXISTING);
+}
+
+task dist {
+  dependsOn build
+  doLast {
+        // FileUtils.copyDirectory(file("mode/libraries/vr/examples"), 
+        //                         file("${root}/libraries/vr/examples"))
+        // FileUtils.copyDirectory(file("mode/libraries/vr/library"), 
+        //                         file("${root}/libraries/vr/library"))
+        // FileUtils.copyDirectory(file("mode/libraries/vr/src"), 
+        //                         file("${root}/libraries/vr/src"))
+        // Files.copy(file("mode/libraries/vr/library.properties").toPath(),
+        //            file("${root}/libraries/vr/library.properties").toPath(), REPLACE_EXISTING);                             
+
+        // File distFolder = file("dist");
+        // distFolder.mkdirs();
+        // ZipUtil.pack(file("${buildDir}/zip"), new File("dist/AndroidMode.zip"));
+        // Files.copy(file("mode/mode.properties").toPath(),
+        //            file("dist/AndroidMode.txt").toPath(), REPLACE_EXISTING);
+    }
+}

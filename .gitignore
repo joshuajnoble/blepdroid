@@ -1,0 +1,13 @@
+debug/.gradle
+debug/.idea
+debug/gradle
+debug/gradlew*
+
+**/*.iml
+**/.DS_Store
+**/build
+**/bin
+**/dist
+
+**/local.properties
+.gradle
