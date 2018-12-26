@@ -274,6 +274,10 @@ public class Blepdroid extends Fragment {
 		}
 	};
 
+	public Blepdroid() {
+	  super();
+	}
+
 	public Blepdroid(PApplet _parent) {
 
 		PApplet.println(" Blepdroid starting Blepdroid(PApplet _parent) ");
