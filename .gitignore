@@ -3,11 +3,13 @@ debug/.idea
 debug/gradle
 debug/gradlew*
 
+library/*.jar
+
 **/*.iml
 **/.DS_Store
 **/build
 **/bin
 **/dist
-
+r
 **/local.properties
 .gradle
