@@ -142,10 +142,12 @@ class ClassesJarArtifactTransform extends ArtifactTransform {
         final File renamedJar = new File(getOutputDirectory(), aarName + ".jar")
         renamedJar << file.bytes
         
-        File libraryFolder = new File(System.getProperty("user.dir"), "library")
-        libraryFolder.mkdirs();
-        final File libraryJar = new File(libraryFolder, aarName + ".jar")
-        Files.copy(renamedJar.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
+        // This could be done better usin the following:
+        // https://github.com/nekocode/GradleImportAar/issues/3
+        // File libraryFolder = new File(System.getProperty("user.dir"), "library")
+        // libraryFolder.mkdirs();
+        // final File libraryJar = new File(libraryFolder, aarName + ".jar")
+        // Files.copy(renamedJar.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
 
         return ImmutableList.of(renamedJar)
     }
@@ -233,18 +235,19 @@ build.doLast {
 task dist {
   dependsOn build
   doLast {
-        // FileUtils.copyDirectory(file("mode/libraries/vr/examples"), 
-        //                         file("${root}/libraries/vr/examples"))
-        // FileUtils.copyDirectory(file("mode/libraries/vr/library"), 
-        //                         file("${root}/libraries/vr/library"))
-        // FileUtils.copyDirectory(file("mode/libraries/vr/src"), 
-        //                         file("${root}/libraries/vr/src"))
-        // Files.copy(file("mode/libraries/vr/library.properties").toPath(),
-        //            file("${root}/libraries/vr/library.properties").toPath(), REPLACE_EXISTING);                             
+        File distFolder = file("dist/blepdroid");
+        distFolder.mkdirs();
 
-        // File distFolder = file("dist");
-        // distFolder.mkdirs();
-        // ZipUtil.pack(file("${buildDir}/zip"), new File("dist/AndroidMode.zip"));
+        FileUtils.copyDirectory(file("examples"),
+                                file("dist/blepdroid/examples"))
+        FileUtils.copyDirectory(file("library"),
+                                file("dist/blepdroid/library"))
+        FileUtils.copyDirectory(file("src"),
+                                file("dist/blepdroid/src"))
+        Files.copy(file("library.properties").toPath(),
+                   file("dist/blepdroid/library.properties").toPath(), REPLACE_EXISTING);
+
+        ZipUtil.pack(file("dist/blepdroid"), new File("dist/blepdroid.zip"));
         // Files.copy(file("mode/mode.properties").toPath(),
         //            file("dist/AndroidMode.txt").toPath(), REPLACE_EXISTING);
     }
