@@ -102,6 +102,8 @@ configurations {
 }
 
 dependencies {
+    def list = ["com.android.support:support-v4:${supportLibsVersion}"]
+
     // Transforamtions to extract the classes.jar in the aar package
     def explodedAarType = ArtifactType.EXPLODED_AAR.getType()
     registerTransform {
@@ -123,10 +125,10 @@ dependencies {
     }
 
     compileOnly name: "android"
-    aar "com.android.support:support-v4:${supportLibsVersion}"
-    // implementation "com.android.support:appcompat-v7:${supportLibsVersion}"
-    // implementation "com.android.support:design:${supportLibsVersion}"
     compileOnly "org.p5android:processing-core:${modeVersion}"
+    for (dep in list) {
+        aar dep
+    }
 }
 
 /**
@@ -139,10 +141,12 @@ class ClassesJarArtifactTransform extends ArtifactTransform {
         final String aarName = names[names.length - 4].replace(".aar", "")
         final File renamedJar = new File(getOutputDirectory(), aarName + ".jar")
         renamedJar << file.bytes
+        
         File libraryFolder = new File(System.getProperty("user.dir"), "library")
         libraryFolder.mkdirs();
         final File libraryJar = new File(libraryFolder, aarName + ".jar")
         Files.copy(renamedJar.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
+
         return ImmutableList.of(renamedJar)
     }
 }
@@ -221,7 +225,7 @@ build.doLast {
     Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
                file("dist/${libName}-${libVersion}.jar").toPath(), REPLACE_EXISTING);
     Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
-               file("dist/processing-${libName}-${libVersion}-sources.jar").toPath(), REPLACE_EXISTING);
+               file("dist/${libName}-${libVersion}-sources.jar").toPath(), REPLACE_EXISTING);
     Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
                file("dist/${libName}-${libVersion}.jar.md5").toPath(), REPLACE_EXISTING);
 }
