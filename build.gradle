@@ -33,7 +33,7 @@ allprojects {
     // Versions of all dependencies
     ext.targetSdkVersion = '26'
     ext.supportLibsVersion = '26.0.2'
-    ext.modeVersion = '4.0.3'
+    ext.modeVersion = '4.0.4'
     
     // Getting library properties
     Properties libProperties = new Properties()
