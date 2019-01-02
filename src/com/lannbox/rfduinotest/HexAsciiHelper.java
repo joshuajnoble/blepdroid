@@ -3,7 +3,7 @@ package com.lannbox.rfduinotest;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
-import javax.xml.bind.DatatypeConverter;
+//import javax.xml.bind.DatatypeConverter;
 
 //import org.apache.http.util.ByteArrayBuffer;
 
@@ -55,7 +55,7 @@ public class HexAsciiHelper {
         return ascii.toString();
     }
 
-    public static byte[] hexToBytes(String hex) {
+//    public static byte[] hexToBytes(String hex) {
         //ByteArrayBuffer bytes = new ByteArrayBuffer(hex.length() / 2);
 //    	ByteBuffer bytes = new ByteBuffer(hex.length() / 2);
 //        for (int i = 0; i < hex.length(); i++) {
@@ -75,7 +75,7 @@ public class HexAsciiHelper {
 //        }
 //        return bytes.buffer();
     	
-    	return DatatypeConverter.parseHexBinary(hex);
-    	
-    }
+//    	return DatatypeConverter.parseHexBinary(hex);
+//
+//    }
 }

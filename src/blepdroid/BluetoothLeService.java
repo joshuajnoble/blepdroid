@@ -81,7 +81,10 @@ public class BluetoothLeService extends Service {
 
 	/**
 	 * Initializes a reference to the local Bluetooth adapter.
-	 * 
+	 *
+	 * @param parent
+	 *            The parent sketch.
+	 *
 	 * @return Return true if the initialization is successful.
 	 */
 	public boolean initialize(PApplet parent) {
@@ -115,8 +118,8 @@ public class BluetoothLeService extends Service {
 	/**
 	 * Connects to the GATT server hosted on the Bluetooth LE device.
 	 * 
-	 * @param address
-	 *            The device address of the destination device.
+	 * @param device
+	 *            The destination device.
 	 * 
 	 * @return Return true if the connection is initiated successfully. The
 	 *         connection result is reported asynchronously through the
@@ -203,6 +206,10 @@ public class BluetoothLeService extends Service {
 	 * disconnection result is reported asynchronously through the
 	 * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
 	 * callback.
+	 *
+	 * @param device
+	 *            The device to disconnect.
+	 *
 	 */
 	public void disconnect(BlepdroidDevice device) {
 		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
@@ -262,9 +269,16 @@ public class BluetoothLeService extends Service {
 	 * asynchronously through the
 	 * {@code BluetoothGattCallback#onCharacteristicWrite(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
 	 * callback.
-	 * 
-	 * @param characteristic
+	 *
+	 * @param device
+	 *            The device to write the characteristic to.
+	 *
+	 * @param characteristicID
 	 *            The characteristic to read from.
+	 *
+	 * @param value
+	 *            The value to be written.
+	 *
 	 */
 	public void writeCharacteristic(BlepdroidDevice device, UUID characteristicID, byte[] value) {
 		// if (mBluetoothAdapter == null || mBluetoothGatt == null) {
@@ -309,8 +323,11 @@ public class BluetoothLeService extends Service {
 	 * result is reported asynchronously through the
 	 * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
 	 * callback.
-	 * 
-	 * @param characteristic
+	 *
+	 * @param device
+	 *            The device to read the characteristic from.
+	 *
+	 * @param characteristicID
 	 *            The characteristic to read from.
 	 */
 	public void readCharacteristic(BlepdroidDevice device, UUID characteristicID) {
@@ -423,7 +440,10 @@ public class BluetoothLeService extends Service {
 	 * Retrieves a list of supported GATT services on the connected device. This
 	 * should be invoked only after {@code BluetoothGatt#discoverServices()}
 	 * completes successfully.
-	 * 
+	 *
+	 * @param address
+	 *            The address of the connected device.
+	 *
 	 * @return A {@code List} of supported services.
 	 */
 	public List<BluetoothGattService> getSupportedGattServices( String address ) {
