@@ -39,11 +39,22 @@ allprojects {
     ext.libPrettyVersion = buildProperties.getProperty("library.prettyVersion")
     ext.javaVersion = buildProperties.getProperty("java.target.version")
 
-    ext.sdkLocation = buildProperties.getProperty("android_sdk.location")
+    ext.userHome = System.getProperty("user.home")
+    ext.sketchbookLocation = buildProperties.getProperty("sketchbook.location").replace("\${user.home}", userHome)
+    ext.replaceEnv = { value ->
+        value = value.replace("\${sketchbook.location}", sketchbookLocation)
+        value = value.replace("\${user.home}", userHome)
+        return value
+    }
+
+    ext.sdkLocation = replaceEnv(buildProperties.getProperty("android_sdk.location"))
     ext.sdkAPILevel = buildProperties.getProperty("android_sdk.api_level")
     ext.jarDeps = buildProperties.getProperty("dependencies.jar").split(',')
     ext.aarDeps = buildProperties.getProperty("dependencies.aar").split(',')
-    ext.libDeps = buildProperties.getProperty("dependencies.libraries").split(',')
+    ext.libDeps = replaceEnv(buildProperties.getProperty("dependencies.libraries")).split(',')
+    ext.copyDeps = buildProperties.getProperty("dependencies.copy_to_library").split(',')
+
+    ext.compileMode = buildProperties.getProperty("project.compile")
 
     // Extracting library names from the local library dependencies
     ext.libNames = []
@@ -61,7 +72,7 @@ allprojects {
                 "It needs to have three parts: group, name, and version, separated by colons.")
         }
         remoteDependencies.add([group:parts[0], name:parts[1], version:parts[2]])    
-    }    
+    }
     for (dep in jarDeps) addRemoteDepenency(dep) 
     for (dep in aarDeps) addRemoteDepenency(dep)
 
@@ -115,7 +126,7 @@ clean.doFirst {
  * https://github.com/nekocode/Gradle-Import-Aar
  */
 configurations {
-    aar {
+    aarCompileOnly {
         attributes {
             attribute(ARTIFACT_FORMAT, ArtifactTypeDefinition.JAR_TYPE)
         }
@@ -152,8 +163,8 @@ dependencies {
 
     compileOnly name: "android"
     for (dep in jarDeps) compileOnly dep
-    for (dep in aarDeps) aar dep
-    for (dep in libNames) compileOnly dep
+    for (dep in aarDeps) aarCompileOnly dep
+    for (dep in libNames) compileOnly name: dep
 }
 
 /**
@@ -166,16 +177,25 @@ class ClassesJarArtifactTransform extends ArtifactTransform {
         final String aarName = names[names.length - 4].replace(".aar", "")
         final File renamedJar = new File(getOutputDirectory(), aarName + ".jar")
         renamedJar << file.bytes
-        
-        // This could be done better usin the following:
-        // https://github.com/nekocode/GradleImportAar/issues/3
-        // File libraryFolder = new File(System.getProperty("user.dir"), "library")
-        // libraryFolder.mkdirs();
-        // final File libraryJar = new File(libraryFolder, aarName + ".jar")
-        // Files.copy(renamedJar.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
-
         return ImmutableList.of(renamedJar)
     }
+}
+
+project.afterEvaluate {
+    ext.copyJarDependency = { fn ->
+        if (fn.name.lastIndexOf('.jar') != fn.name.size() - 4) return
+        copyDeps.each { dep ->
+            if (dep &&  -1 < fn.name.indexOf(dep)) {
+                File libraryFolder = new File(System.getProperty("user.dir"), "library")
+                libraryFolder.mkdirs();
+                final File libraryJar = new File(libraryFolder, fn.getName())
+                Files.copy(fn.toPath(), libraryJar.toPath(), REPLACE_EXISTING);
+            }
+        }
+    }
+
+    it.configurations.getByName("compileOnly").forEach { depFile -> copyJarDependency(depFile) }
+    it.configurations.getByName("aarCompileOnly").forEach { depFile -> copyJarDependency(depFile) }
 }
 
 task createPom {
@@ -226,7 +246,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 artifacts {
-//     archives javadocJar
+    // archives javadocJar
     archives sourcesJar
 }
 
@@ -236,17 +256,19 @@ jar.doLast { task ->
 
 clean.doFirst {
     delete "distribution/${libName}"
-    delete "library/${libName}.jar"
+    delete fileTree('library') {
+        include '**/*.jar'
+    }
 }
 
 build.doLast {
-    // // Copying lib jar to library folder
+    // Copying lib jar to library folder
     File libJar = file("library/${libName}.jar")
     libJar.mkdirs();
     Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
                libJar.toPath(), REPLACE_EXISTING);   
 
-    // // Copying the files for release on JCentral (optional)
+    // Copying the files for release on JCentral (optional)
     File distFolder = file("distribution");
     distFolder.mkdirs();
     Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
@@ -273,6 +295,9 @@ task dist {
                                 file("distribution/${libName}/src"))
         Files.copy(file("resources/library.properties").toPath(),
                    file("distribution/${libName}/library.properties").toPath(), REPLACE_EXISTING);
+
+        FileUtils.copyDirectory(file("distribution/${libName}"),
+                                file("${sketchbookLocation}/libraries/${libName}"))
 
         ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
     }
