@@ -51,6 +51,20 @@ allprojects {
         if (lib) libNames.add(lib.split("/")[-1])
     }
 
+    // Putting all remote depndencies (jar and aar) into an array to pass to the pom task
+    ext.remoteDependencies = []
+    ext.addRemoteDepenency = { dep ->
+        def parts = dep.split(':')
+        if (parts.length != 3) {
+            throw new GradleException(
+                "Malformed Gradle dependency: " + lib + "\n" +
+                "It needs to have three parts: group, name, and version, separated by colons.")
+        }
+        remoteDependencies.add([group:parts[0], name:parts[1], version:parts[2]])    
+    }    
+    for (dep in jarDeps) addRemoteDepenency(dep) 
+    for (dep in aarDeps) addRemoteDepenency(dep)
+
     def fn = project.rootProject.file("local.properties")
     if (!fn.exists()) {
         if (sdkLocation) {
@@ -178,16 +192,16 @@ task createPom {
                    distribution "repo"
                }
            }
-           dependencies {
-               dependency {
-                   groupId "org.p5android"
-                   artifactId "processing-core"
-                   version "4.0.4"
-                   scope "implementation"
-               }
-
-
-           }
+        }
+    }.withXml {
+        // Add remote dependencies the pom file
+        def dependenciesNode = asNode().appendNode('dependencies')
+        remoteDependencies.each { dependency ->
+            def dependencyNode = dependenciesNode.appendNode('dependency')
+            dependencyNode.appendNode('groupId', dependency.group)
+            dependencyNode.appendNode('artifactId', dependency.name)
+            dependencyNode.appendNode('version', dependency.version)
+            dependencyNode.appendNode('scope', 'implementation')
         }
     }.writeTo("distribution/${libName}-${libPrettyVersion}.pom")
 }
