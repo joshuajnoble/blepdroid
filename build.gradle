@@ -53,6 +53,7 @@ allprojects {
     ext.aarDeps = buildProperties.getProperty("dependencies.aar").split(',')
     ext.libDeps = replaceEnv(buildProperties.getProperty("dependencies.libraries")).split(',')
     ext.copyDeps = buildProperties.getProperty("dependencies.copy_to_library").split(',')
+    ext.allJarDeps = []
 
     ext.compileMode = buildProperties.getProperty("project.compile")
 
@@ -184,6 +185,7 @@ class ClassesJarArtifactTransform extends ArtifactTransform {
 project.afterEvaluate {
     ext.copyJarDependency = { fn ->
         if (fn.name.lastIndexOf('.jar') != fn.name.size() - 4) return
+        allJarDeps.add(fn)
         copyDeps.each { dep ->
             if (dep &&  -1 < fn.name.indexOf(dep)) {
                 File libraryFolder = new File(System.getProperty("user.dir"), "library")
@@ -241,15 +243,27 @@ task sourcesJar(type: Jar, dependsOn: classes) {
     from sourceSets.main.allSource
 }
 
+task javadoc(type: Javadoc, overwrite: true) {
+    failOnError false
+
+    title = libName
+    source = sourceSets.main.allJava
+
+    // Adding all dependencies to the classpath. Because files is a lazy collection:
+    // https://docs.gradle.org/current/javadoc/org/gradle/api/Project.html#files-java.lang.Object...-
+    // even though it has not been initalized yet it will be evaluated with the correct values. 
+    classpath = sourceSets.main.runtimeClasspath + project.files(allJarDeps)    
+}
+
 // Does not work because of Processing-specific tags in source code, such as @webref
 task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = "javadoc"
     from javadoc.destinationDir
 }
 
-artifacts {
-    // if (compileMode == "normal") archives javadocJar
+artifacts {    
     archives sourcesJar
+    if (compileMode == "normal") archives javadocJar
 }
 
 jar.doLast { task ->
@@ -278,6 +292,8 @@ build.doLast {
                    file("distribution/${libName}-${libPrettyVersion}.jar").toPath(), REPLACE_EXISTING);
         Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
                    file("distribution/${libName}-${libPrettyVersion}-sources.jar").toPath(), REPLACE_EXISTING);
+        Files.copy(file("$buildDir/libs/${libName}-javadoc.jar").toPath(),
+                   file("distribution/${libName}-${libPrettyVersion}-javadoc.jar").toPath(), REPLACE_EXISTING);                           
         Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
                    file("distribution/${libName}-${libPrettyVersion}.jar.md5").toPath(), REPLACE_EXISTING);        
     }
@@ -301,6 +317,12 @@ task dist {
                    file("distribution/${libName}/library.properties").toPath(), REPLACE_EXISTING);
 
         if (compileMode == "normal") {
+            FileUtils.copyDirectory(file("$buildDir/docs/javadoc"),
+                                    file("distribution/${libName}/reference"))
+            Files.copy(file("resources/stylesheet.css").toPath(),
+                       file("distribution/${libName}/reference/stylesheet.css").toPath(), REPLACE_EXISTING);
+
+
             ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
         }
 
