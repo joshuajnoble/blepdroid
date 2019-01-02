@@ -199,31 +199,33 @@ project.afterEvaluate {
 }
 
 task createPom {
-    pom {
-       project {
-           groupId "${libPackage}"
-           artifactId "${libName}"
-           version "${libPrettyVersion}"
-           packaging "jar"
-           licenses {
-               license {
-                   name "GNU Lesser General Public License, version 2.1"
-                   url "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
-                   distribution "repo"
+    if (compileMode == "normal") {
+        pom {
+           project {
+               groupId "${libPackage}"
+               artifactId "${libName}"
+               version "${libPrettyVersion}"
+               packaging "jar"
+               licenses {
+                   license {
+                       name "GNU Lesser General Public License, version 2.1"
+                       url "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
+                       distribution "repo"
+                   }
                }
-           }
-        }
-    }.withXml {
-        // Add remote dependencies the pom file
-        def dependenciesNode = asNode().appendNode('dependencies')
-        remoteDependencies.each { dependency ->
-            def dependencyNode = dependenciesNode.appendNode('dependency')
-            dependencyNode.appendNode('groupId', dependency.group)
-            dependencyNode.appendNode('artifactId', dependency.name)
-            dependencyNode.appendNode('version', dependency.version)
-            dependencyNode.appendNode('scope', 'implementation')
-        }
-    }.writeTo("distribution/${libName}-${libPrettyVersion}.pom")
+            }
+        }.withXml {
+            // Add remote dependencies the pom file
+            def dependenciesNode = asNode().appendNode('dependencies')
+            remoteDependencies.each { dependency ->
+                def dependencyNode = dependenciesNode.appendNode('dependency')
+                dependencyNode.appendNode('groupId', dependency.group)
+                dependencyNode.appendNode('artifactId', dependency.name)
+                dependencyNode.appendNode('version', dependency.version)
+                dependencyNode.appendNode('scope', 'implementation')
+            }
+        }.writeTo("distribution/${libName}-${libPrettyVersion}.pom")
+    }
 }
 
 sourceSets {
@@ -246,7 +248,7 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 artifacts {
-    // archives javadocJar
+    // if (compileMode == "normal") archives javadocJar
     archives sourcesJar
 }
 
@@ -268,15 +270,17 @@ build.doLast {
     Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
                libJar.toPath(), REPLACE_EXISTING);   
 
-    // Copying the files for release on JCentral (optional)
-    File distFolder = file("distribution");
-    distFolder.mkdirs();
-    Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
-               file("distribution/${libName}-${libPrettyVersion}.jar").toPath(), REPLACE_EXISTING);
-    Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
-               file("distribution/${libName}-${libPrettyVersion}-sources.jar").toPath(), REPLACE_EXISTING);
-    Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
-               file("distribution/${libName}-${libPrettyVersion}.jar.md5").toPath(), REPLACE_EXISTING);
+    if (compileMode == "normal") {
+        // Copying the files for release on JCentral
+        File distFolder = file("distribution");
+        distFolder.mkdirs();
+        Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
+                   file("distribution/${libName}-${libPrettyVersion}.jar").toPath(), REPLACE_EXISTING);
+        Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
+                   file("distribution/${libName}-${libPrettyVersion}-sources.jar").toPath(), REPLACE_EXISTING);
+        Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
+                   file("distribution/${libName}-${libPrettyVersion}.jar.md5").toPath(), REPLACE_EXISTING);        
+    }
 }
 
 task dist {
@@ -296,9 +300,11 @@ task dist {
         Files.copy(file("resources/library.properties").toPath(),
                    file("distribution/${libName}/library.properties").toPath(), REPLACE_EXISTING);
 
-        FileUtils.copyDirectory(file("distribution/${libName}"),
-                                file("${sketchbookLocation}/libraries/${libName}"))
+        if (compileMode == "normal") {
+            ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
+        }
 
-        ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
+        FileUtils.copyDirectory(file("distribution/${libName}"),
+                                file("${sketchbookLocation}/libraries/${libName}"))        
     }
 }
