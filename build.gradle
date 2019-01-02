@@ -30,21 +30,34 @@ buildscript {
 }
 
 allprojects {
-    // Versions of all dependencies
-    ext.targetSdkVersion = '26'
-    ext.supportLibsVersion = '26.0.2'
-    ext.modeVersion = '4.0.4'
-    
-    // Getting library properties
-    Properties libProperties = new Properties()
-    libProperties.load(project.rootProject.file("library.properties").newDataInputStream())
-    ext.libName = libProperties.getProperty("name")
-    ext.libPackage = libProperties.getProperty("package")
-    ext.libVersion = libProperties.getProperty("prettyVersion").split(' ')[0].trim()
+    // Getting build properties
+    Properties buildProperties = new Properties()
+    buildProperties.load(project.rootProject.file("resources/build.properties").newDataInputStream())
+    ext.libName = buildProperties.getProperty("project.name")
+    ext.libPackage = buildProperties.getProperty("project.package")
+    ext.libVersion = buildProperties.getProperty("library.version")
+    ext.libPrettyVersion = buildProperties.getProperty("library.prettyVersion")
+    ext.javaVersion = buildProperties.getProperty("java.target.version")
+
+    ext.sdkLocation = buildProperties.getProperty("android_sdk.location")
+    ext.sdkAPILevel = buildProperties.getProperty("android_sdk.api_level")
+    ext.jarDeps = buildProperties.getProperty("dependencies.jar").split(',')
+    ext.aarDeps = buildProperties.getProperty("dependencies.aar").split(',')
+    ext.libDeps = buildProperties.getProperty("dependencies.libraries").split(',')
+
+    // Extracting library names from the local library dependencies
+    ext.libNames = []
+    for (lib in libDeps) {
+        if (lib) libNames.add(lib.split("/")[-1])
+    }
 
     def fn = project.rootProject.file("local.properties")
     if (!fn.exists()) {
-        if (System.env["ANDROID_SDK"] != null) {
+        if (sdkLocation) {
+            fn.withWriterAppend { w ->
+                w << "sdk.dir=${sdkLocation}\n"
+            }
+        } else if (System.env["ANDROID_SDK"] != null) {
             def syspath = System.env["ANDROID_SDK"]
             def parts = syspath.split(Pattern.quote(File.separator))
             def path = String.join("/", parts)
@@ -53,9 +66,9 @@ allprojects {
             }
         } else {
             throw new GradleException(
-                "The file local.properties does not exist, and there is no ANDROID_SDK environmental variable defined in the system.\n" +
-                "Define ANDROID_SDK so it points to the location of the Android SDK, or create the local.properties file manually\n" +
-                "and add the following line to it:\n" +
+                "No Android SDK path provided in build.properties file, and there is no ANDROID_SDK environmental variable defined in the system.\n" +
+                "Set the path in local.properties, orefine ANDROID_SDK so it points to the location of the Android SDK.\n" +
+                "You can also create the local.properties file manully and add the following line to it:\n" +
                 "sdk.dir=<path to Android SDK>")
         }
     }
@@ -63,22 +76,23 @@ allprojects {
     Properties localProperties = new Properties()
     localProperties.load(project.rootProject.file("local.properties").newDataInputStream())
     def sdkDir = localProperties.getProperty("sdk.dir")
-    ext.androidPlatformPath = "${sdkDir}/platforms/android-${targetSdkVersion}"
-    ext.androidToolsLibPath = "${sdkDir}/tools/lib"
+    ext.androidPlatformPath = "${sdkDir}/platforms/android-${sdkAPILevel}"
 
     repositories {
         google()
         jcenter()
         flatDir dirs: androidPlatformPath
-        flatDir dirs: androidToolsLibPath
+        for (lib in libDeps) {
+            if (lib) flatDir dirs: lib + "/library"
+        }
     }
 
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7    
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
 }
 
 clean.doFirst {
-    delete "dist"
+    delete "distribution"
 }
 
 /**
@@ -102,8 +116,6 @@ configurations {
 }
 
 dependencies {
-    def list = ["com.android.support:support-v4:${supportLibsVersion}"]
-
     // Transforamtions to extract the classes.jar in the aar package
     def explodedAarType = ArtifactType.EXPLODED_AAR.getType()
     registerTransform {
@@ -125,10 +137,9 @@ dependencies {
     }
 
     compileOnly name: "android"
-    compileOnly "org.p5android:processing-core:${modeVersion}"
-    for (dep in list) {
-        aar dep
-    }
+    for (dep in jarDeps) compileOnly dep
+    for (dep in aarDeps) aar dep
+    for (dep in libNames) compileOnly dep
 }
 
 /**
@@ -154,13 +165,11 @@ class ClassesJarArtifactTransform extends ArtifactTransform {
 }
 
 task createPom {
-    // The compile configuration should be replaced by implementation eventually:
-    // https://developer.android.com/studio/build/gradle-plugin-3-0-0-migration#new_configurations  
     pom {
        project {
            groupId "${libPackage}"
            artifactId "${libName}"
-           version "${libVersion}"
+           version "${libPrettyVersion}"
            packaging "jar"
            licenses {
                license {
@@ -173,12 +182,14 @@ task createPom {
                dependency {
                    groupId "org.p5android"
                    artifactId "processing-core"
-                   version "${modeVersion}"
-                   scope "compile"
-               }             
+                   version "4.0.4"
+                   scope "implementation"
+               }
+
+
            }
         }
-    }.writeTo("dist/${libName}-${libVersion}.pom")
+    }.writeTo("distribution/${libName}-${libPrettyVersion}.pom")
 }
 
 sourceSets {
@@ -210,7 +221,7 @@ jar.doLast { task ->
 }
 
 clean.doFirst {
-    delete "dist"
+    delete "distribution/${libName}"
     delete "library/${libName}.jar"
 }
 
@@ -222,33 +233,33 @@ build.doLast {
                libJar.toPath(), REPLACE_EXISTING);   
 
     // // Copying the files for release on JCentral (optional)
-    File distFolder = file("dist");
+    File distFolder = file("distribution");
     distFolder.mkdirs();
     Files.copy(file("$buildDir/libs/${libName}.jar").toPath(),
-               file("dist/${libName}-${libVersion}.jar").toPath(), REPLACE_EXISTING);
+               file("distribution/${libName}-${libPrettyVersion}.jar").toPath(), REPLACE_EXISTING);
     Files.copy(file("$buildDir/libs/${libName}-sources.jar").toPath(),
-               file("dist/${libName}-${libVersion}-sources.jar").toPath(), REPLACE_EXISTING);
+               file("distribution/${libName}-${libPrettyVersion}-sources.jar").toPath(), REPLACE_EXISTING);
     Files.copy(file("$buildDir/libs/${libName}.jar.MD5").toPath(),
-               file("dist/${libName}-${libVersion}.jar.md5").toPath(), REPLACE_EXISTING);
+               file("distribution/${libName}-${libPrettyVersion}.jar.md5").toPath(), REPLACE_EXISTING);
 }
 
 task dist {
   dependsOn build
   doLast {
-        File distFolder = file("dist/blepdroid");
+        File distFolder = file("distribution/${libName}");
         distFolder.mkdirs();
 
         FileUtils.copyDirectory(file("examples"),
-                                file("dist/blepdroid/examples"))
+                                file("distribution/${libName}/examples"))
+        FileUtils.copyDirectory(file("data"),
+                                file("distribution/${libName}/data"))        
         FileUtils.copyDirectory(file("library"),
-                                file("dist/blepdroid/library"))
+                                file("distribution/${libName}/library"))
         FileUtils.copyDirectory(file("src"),
-                                file("dist/blepdroid/src"))
-        Files.copy(file("library.properties").toPath(),
-                   file("dist/blepdroid/library.properties").toPath(), REPLACE_EXISTING);
+                                file("distribution/${libName}/src"))
+        Files.copy(file("resources/library.properties").toPath(),
+                   file("distribution/${libName}/library.properties").toPath(), REPLACE_EXISTING);
 
-        ZipUtil.pack(file("dist/blepdroid"), new File("dist/blepdroid.zip"));
-        // Files.copy(file("mode/mode.properties").toPath(),
-        //            file("dist/AndroidMode.txt").toPath(), REPLACE_EXISTING);
+        ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
     }
 }

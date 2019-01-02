@@ -9,7 +9,7 @@ library/*.jar
 **/.DS_Store
 **/build
 **/bin
-**/dist
-r
+**/distribution
+
 **/local.properties
 .gradle
