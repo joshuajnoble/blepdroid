@@ -317,10 +317,18 @@ task dist {
                    file("distribution/${libName}/library.properties").toPath(), REPLACE_EXISTING);
 
         if (compileMode == "normal") {
+            // Copy reference
             FileUtils.copyDirectory(file("$buildDir/docs/javadoc"),
                                     file("distribution/${libName}/reference"))
             Files.copy(file("resources/stylesheet.css").toPath(),
                        file("distribution/${libName}/reference/stylesheet.css").toPath(), REPLACE_EXISTING);
+
+            // Generate website            
+            FileUtils.copyDirectory(file("web"),
+                                    file("distribution/web"))
+
+            FileUtils.copyDirectory(file("distribution/${libName}/reference"),
+                                    file("distribution/web/reference"))
 
 
             ZipUtil.pack(file("distribution/${libName}"), new File("distribution/${libName}-${libVersion}.zip"));
