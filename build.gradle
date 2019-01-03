@@ -39,6 +39,9 @@ allprojects {
     ext.libPrettyVersion = buildProperties.getProperty("library.prettyVersion")
     ext.javaVersion = buildProperties.getProperty("java.target.version")
 
+    project.archivesBaseName = libName
+ 
+
     ext.userHome = System.getProperty("user.home")
     ext.sketchbookLocation = buildProperties.getProperty("sketchbook.location").replace("\${user.home}", userHome)
     ext.replaceEnv = { value ->
